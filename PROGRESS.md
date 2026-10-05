@@ -62,8 +62,17 @@ warten auf Profil-Adressen und die Prüfung in TESTEN.md Abschnitt 3. Regel 6 (L
 Deckeln der Erfahrung braucht die Wachstumskurven aus den Spieldaten. Regel 7 (Sonderbonbons) offen.
 Unklar bis zum Test: Wie unterdrückt `joypad.set` in DeSmuME Tasten?
 
-**Phase 4:** Sicherungen und Todeszähler fertig (Test im Emulator offen). Offen: Prolog überspringen,
-Spitznamen-Abfrage überspringen, Export des Todesprotokolls als Textdatei.
+**Phase 4:** fertig im Code, Test im Emulator offen. Umfang: Sicherungen, Todeszähler (Server und lokal,
+auch ohne Verbindung angezeigt), Overlay mit Aufhol-Kasten, Gruppen-, Friedhof- und Gebiets-Ansicht,
+Partner-Anzeige, Prolog überspringen (Abspieler mit Schnellvorlauf, Ende am Spielzustand, Name aus
+config.lua, Aufnahme-Funktion für die Eingabefolge) und Spitznamen-Abfrage ablehnen.
+Für Platin fehlen im Profil noch: Eingabefolge (per Aufnahme), Merkmal „kann frei laufen“, Adresse des
+Spielernamens, Merkmal „Spitznamen-Abfrage offen“. Bis dahin sind die Automatiken aus und das Overlay sagt das.
+Export des Todesprotokolls als Textdatei gehört zu Phase 6 und ist offen.
+
+**Solo-Modus:** fertig. `mode = "solo"` in config.lua: lokale Regel-Engine im Script, ohne Server und Brücke,
+Zustand und Zähler in `local/`, Run startet automatisch. Alternativ allein über den Server (mit Übersicht
+und Discord).
 
 **Phase 5 – Randomizer:** nicht begonnen (Platzhalter `lua/rando`).
 **Phase 6:** Klauseln 1–3 und 4 (Geschenke) in der Engine fertig. Folgemodus, Items im Kampf und
@@ -75,6 +84,9 @@ Offen: Team-Einteilung bedienen, Bilanz pro Team-Konstellation.
 
 ## Verlauf
 
+- 05.10.2026 (3): Aufhol-Modus-Overlay (Kasten mit Grenze, Fang hier, freie Gebiete, „offline seit“),
+  Phase 4 (Gruppen-Ansicht, Automatiken Prolog/Spitzname, Eingabe-Aufnahme, lokale Todeszähler),
+  Solo-Modus ohne Server.
 - 05.10.2026 (2): Platin-Profil CPUD (ungetestet, mit Quellen), Adress-Suche per Signatur, Zeigerketten,
   Header-Adresse korrigiert (0x023FFE0C statt Spiegeladresse 0x027FFE0C), `check.lua` mit Live-Anzeige und Bericht.
 - 05.10.2026: Gerüst, Lua-Grundlagen, Regel-Engine, Server, Netz und Brücke, Speicherschicht,

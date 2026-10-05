@@ -1,22 +1,100 @@
 -- Overlay-Inhalt als Textzeilen. Rein (keine Emulator-API); app/init.lua zeichnet die Zeilen.
+-- Zeile: { text, color, bg } – bg (optional) färbt den Hintergrund der Zeile (z. B. Aufhol-Kasten).
 
 local R = require("core.rules")
 local M = require("core.model")
 
 local Overlay = {}
 
+Overlay.WIDTH = 42 -- Zeichen pro Zeile (DS-Bildschirm 256 px, Schrift ca. 6 px)
+
 local function num(n) return string.format("%.0f", n or 0) end
 
---- Rückgabe: Liste von { text, color } (color: "weiss", "gelb", "rot", "gruen", "grau").
+--- Bricht Text an Leerzeichen um (UTF-8-sicher genug: zählt Bytes, Umlaute brechen etwas früher um).
+function Overlay.wrap(text, width)
+  width = width or Overlay.WIDTH
+  local out = {}
+  local line = ""
+  for word in tostring(text):gmatch("%S+") do
+    if line == "" then
+      line = word
+    elseif #line + 1 + #word <= width then
+      line = line .. " " .. word
+    else
+      out[#out + 1] = line
+      line = "  " .. word
+    end
+    while #line > width do
+      out[#out + 1] = line:sub(1, width)
+      line = "  " .. line:sub(width + 1)
+    end
+  end
+  if line ~= "" then out[#out + 1] = line end
+  if #out == 0 then out[1] = "" end
+  return out
+end
+
+--- Dauer in Minuten/Sekunden ("3 min", "45 s", "2 h 5 min").
+function Overlay.duration(ms)
+  local s = math.max(0, math.floor((ms or 0) / 1000))
+  if s < 60 then return num(s) .. " s" end
+  local m = math.floor(s / 60)
+  if m < 60 then return num(m) .. " min" end
+  return num(math.floor(m / 60)) .. " h " .. num(m % 60) .. " min"
+end
+
+--- Aufhol-Modus-Kasten. now_server: aktuelle Serverzeit (ms) für "offline seit".
+function Overlay.catchup(state, pid, area_key, now_server)
+  local out = {}
+  local info = R.catchup_info(state, pid, area_key)
+  if not info.active then return out end
+  local function add(text, color)
+    for _, l in ipairs(Overlay.wrap(text)) do out[#out + 1] = { text = l, color = color or "weiss", bg = "gelb" } end
+  end
+  add("AUFHOL-MODUS", "schwarz")
+  for _, o in ipairs(info.offline) do
+    local since = (now_server and o.last_seen and o.last_seen > 0) and (" seit " .. Overlay.duration(now_server - o.last_seen)) or ""
+    add(o.name .. " offline" .. since .. " – " .. num(o.badges) .. " Orden" .. (o.area ~= "" and (", zuletzt " .. o.area) or ""), "schwarz")
+  end
+  if info.gym_ok then
+    add("Orden: frei bis " .. num(info.badge_limit) .. " (du: " .. num(state.players[pid].badges) .. ")", "schwarz")
+  else
+    add("Nächste Arena GESPERRT – Orden-Grenze " .. num(info.badge_limit) .. " erreicht", "rot")
+  end
+  if info.catch_here then
+    if info.catch_here.ok then
+      add("Fang hier erlaubt – Gruppe sofort komplett", "gruen")
+    elseif info.catch_here.kind == "aufhol" then
+      add("Fang hier GESPERRT (Partner hat hier nicht gefangen)", "rot")
+    else
+      add("Fang hier: " .. info.catch_here.reason, "schwarz")
+    end
+  end
+  if #info.free_areas > 0 then
+    local names = {}
+    for _, a in ipairs(info.free_areas) do names[#names + 1] = a.name end
+    add("Fang möglich in: " .. table.concat(names, ", "), "schwarz")
+  else
+    add("Kein Gebiet zum Fangen frei – Training ist erlaubt", "schwarz")
+  end
+  add("Tode werden beim Partner nachgetragen.", "schwarz")
+  return out
+end
+
+--- Hauptzeilen. ctx: state, pid, net_status, online, read_only, profile_msg, profile_info, warnings,
+--- stats, lock_reasons, messages, level_cap, compact, area_key, now_server, extra (Zeilen von Automatiken)
 function Overlay.lines(ctx)
   local out = {}
-  local function add(text, color) out[#out + 1] = { text = text, color = color or "weiss" } end
+  local function add(text, color)
+    for _, l in ipairs(Overlay.wrap(text)) do out[#out + 1] = { text = l, color = color or "weiss" } end
+  end
   local state, pid = ctx.state, ctx.pid
 
   add("Soul Link – " .. (ctx.net_status or "?"), ctx.online and "gruen" or "gelb")
   if ctx.read_only then add("LESEMODUS: " .. (ctx.profile_msg or "kein Profil"), "gelb") end
   if ctx.profile_info then add(ctx.profile_info, "grau") end
   for _, w in ipairs(ctx.warnings or {}) do add("! " .. w, "rot") end
+  for _, e in ipairs(ctx.extra or {}) do add(e.text, e.color) end
 
   if not state then return out end
   if state.phase == "lobby" then
@@ -29,16 +107,13 @@ function Overlay.lines(ctx)
 
   local me = state.players[pid]
   if not me then return out end
-  local catchup, off = R.catchup_active(state, pid)
-  if catchup then
-    local names = {}
-    for _, q in ipairs(off) do names[#names + 1] = M.player_name(state, q) end
-    add("AUFHOL-MODUS (offline: " .. table.concat(names, ", ") .. ")", "gelb")
-    local ok, reason = R.gym_allowed(state, pid)
-    if not ok then add(reason, "gelb") end
-  end
-  if ctx.level_cap then add("Level-Cap: " .. (type(ctx.level_cap) == "number" and num(ctx.level_cap) or ctx.level_cap), "weiss") end
+  for _, l in ipairs(Overlay.catchup(state, pid, ctx.area_key, ctx.now_server)) do out[#out + 1] = l end
+  if ctx.level_cap then add("Level-Cap: " .. (type(ctx.level_cap) == "number" and num(ctx.level_cap) or ctx.level_cap)) end
 
+  for _, r in ipairs(ctx.lock_reasons or {}) do add(r, "rot") end
+  for _, m in ipairs(ctx.messages or {}) do
+    add(m.text, m.level == "alarm" and "rot" or (m.level == "warn" and "gelb" or "weiss"))
+  end
   if ctx.compact then return out end
 
   -- Mitspieler
@@ -48,26 +123,50 @@ function Overlay.lines(ctx)
       p.in_battle and ", im Kampf" or "", p.online and "" or " – OFFLINE"), p.online and "weiss" or "grau")
   end
 
-  -- Gruppen
   local team = M.team_of(state, pid)
   if team then
-    local alive, dead = 0, 0
+    local alive, open, dead = 0, 0, 0
     for _, gid in ipairs(team.group_order) do
-      if team.groups[gid].status == "tot" then dead = dead + 1 else alive = alive + 1 end
+      local st = team.groups[gid].status
+      if st == "tot" then dead = dead + 1 elseif st == "offen" then open = open + 1 else alive = alive + 1 end
     end
-    add("Gruppen: " .. num(alive) .. " lebend, " .. num(dead) .. " tot", "weiss")
-    -- Todeszähler aller Spieler (dauerhaft, vom Server)
+    add("Gruppen: " .. num(alive) .. " komplett, " .. num(open) .. " offen, " .. num(dead) .. " tot")
+    -- Todeszähler aller Spieler (dauerhaft, vom Server bzw. lokale Kopie)
     local parts = {}
     for _, q in ipairs(state.order) do
       local s = ctx.stats and ctx.stats[q]
       parts[#parts + 1] = M.player_name(state, q) .. " " .. num(s and s.deaths or 0)
         .. (s and s.dragged and s.dragged > 0 and ("+" .. num(s.dragged)) or "")
     end
-    add("Tode: " .. table.concat(parts, "  "), "weiss")
+    add("Tode: " .. table.concat(parts, "  "))
   end
+  return out
+end
 
-  for _, r in ipairs(ctx.lock_reasons or {}) do add(r, "rot") end
-  for _, m in ipairs(ctx.messages or {}) do add(m.text, m.level == "alarm" and "rot" or (m.level == "warn" and "gelb" or "weiss")) end
+--- Gruppen-Ansicht: jede Gruppe mit Gebiet, Mitgliedern und Status.
+function Overlay.groups(state, pid)
+  local out = {}
+  local team = state and M.team_of(state, pid)
+  if not team then return out end
+  out[#out + 1] = { text = "Gruppen", color = "weiss" }
+  local party = {}
+  for _, uid in ipairs(state.players[pid].party) do party[uid] = true end
+  for _, gid in ipairs(team.group_order) do
+    local g = team.groups[gid]
+    local names = {}
+    for _, q in ipairs(team.members) do
+      local uid = g.members[q]
+      local mon = uid and state.players[q].mons[uid]
+      names[#names + 1] = mon and M.mon_label(mon) or "–"
+    end
+    local mine = g.members[pid] and party[g.members[pid]] and "*" or " "
+    local color = g.status == "tot" and "grau" or (g.status == "offen" and "gelb" or "weiss")
+    for _, l in ipairs(Overlay.wrap(mine .. gid:sub(2) .. " " .. g.area_name .. ": " .. table.concat(names, " / ")
+      .. " [" .. g.status .. "]")) do
+      out[#out + 1] = { text = l, color = color }
+    end
+  end
+  if #team.group_order == 0 then out[#out + 1] = { text = "  noch keine", color = "grau" } end
   return out
 end
 
@@ -79,8 +178,10 @@ function Overlay.graveyard(state, pid)
   out[#out + 1] = { text = "Friedhof", color = "rot" }
   for i = #team.graveyard, math.max(1, #team.graveyard - 12), -1 do
     local d = team.graveyard[i]
-    out[#out + 1] = { text = string.format("%s (%s) Lv.%s %s", d.label, M.player_name(state, d.player), num(d.level),
-      d.area ~= "" and ("– " .. d.area) or ""), color = "grau" }
+    for _, l in ipairs(Overlay.wrap(string.format("%s (%s) Lv.%s %s", d.label, M.player_name(state, d.player), num(d.level),
+      d.area ~= "" and ("– " .. d.area) or ""))) do
+      out[#out + 1] = { text = l, color = "grau" }
+    end
   end
   return out
 end
@@ -92,8 +193,9 @@ function Overlay.areas(state, pid)
   for _, row in ipairs(R.area_overview(state, pid)) do
     local parts = {}
     for _, ps in ipairs(row.players) do parts[#parts + 1] = M.player_name(state, ps.player) .. ": " .. ps.status end
-    out[#out + 1] = { text = (row.current and "> " or "  ") .. row.name .. " – " .. table.concat(parts, ", "),
-      color = row.current and "gelb" or "weiss" }
+    for _, l in ipairs(Overlay.wrap((row.current and "> " or "  ") .. row.name .. " – " .. table.concat(parts, ", "))) do
+      out[#out + 1] = { text = l, color = row.current and "gelb" or "weiss" }
+    end
   end
   return out
 end

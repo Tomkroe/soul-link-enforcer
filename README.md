@@ -19,6 +19,7 @@ Spielkopie. Das Projekt enthält und lädt **keine ROMs, keine Spielgrafiken, ke
 3. [Server starten](#server-starten)
 4. [Server erreichbar machen](#server-erreichbar-machen)
 5. [Script im Emulator starten](#script-im-emulator-starten)
+   · [Solo-Modus](#solo-modus-allein-spielen) · [Komfort-Automatiken](#komfort-automatiken)
 6. [Run-Übersicht](#run-übersicht)
 7. [Regeln](#regeln)
 8. [Schalter und Vorlagen](#schalter-und-vorlagen)
@@ -89,6 +90,25 @@ Das Projekt lässt sich direkt als Ordner öffnen. Unter `.run/` liegen Startkon
 („Server starten“, „Alle Tests“, „Lua-Tests“, „Server-Tests“, „Brücke (lokal)“). Sie nutzen npm und
 brauchen das JavaScript/Node.js-Plugin (in IntelliJ IDEA Ultimate enthalten). In der Community-Edition
 dieselben Befehle im Terminal ausführen (`npm start`, `npm test`).
+
+## Solo-Modus (allein spielen)
+
+Wer allein spielen will, braucht weder Server noch Brücke. In `config.lua`:
+
+```lua
+mode = "solo",
+player_name = "Tom",
+lobby_settings = { preset = "klassisch" },   -- oder "locker" / "hardcore", dazu changes = { ... }
+```
+
+Dann nur `lua/main.lua` in DeSmuME starten. Das Script führt dieselbe Regel-Engine lokal aus und startet den Run
+automatisch (abschaltbar mit `solo = { auto_start = false }`, dann startet Taste `N`). Jede Gruppe hat genau ein
+Monster, alle Regeln ohne Partner gelten: Gebiet verbraucht, Tod endgültig, tote Monster auf 0 KP, Level-Cap,
+Schonfrist, Klauseln, Sicherungen und Todeszähler. Zustand und Zähler liegen in `local/solo_<name>.json` und
+`local/todeszaehler.json` und überstehen Neustarts. Nach einem verlorenen Run beginnt Taste `N` einen neuen Versuch.
+
+Ohne Server gibt es keine Run-Übersicht im Browser und keine Discord-Meldungen. Wer beides möchte, spielt allein
+über den Server: `mode = "server"`, Server starten, allein in die Lobby, Taste `N`.
 
 ## Server starten
 
@@ -190,11 +210,38 @@ Tasten (änderbar in `config.lua`):
 | `P` | Sperre 30 Sekunden aussetzen, um zum PC zu laufen (wird angezeigt) |
 | `N` | Lobby: Run starten (mit `lobby_settings` aus `config.lua`) / nach Run-Ende: neuer Versuch |
 | `Y` / `U` | offene Abstimmung annehmen / ablehnen |
+| `H` | Gruppen-Ansicht (alle Gruppen mit Mitgliedern und Status, * = im eigenen Team) |
+| `K` | Eingabe-Aufnahme starten/beenden (für „Prolog überspringen“) |
 
 Lobby und Run-Start: Wer sich zuerst mit einem Lobby-Code verbindet, legt die Lobby an. Bis zu 4 Spieler
 treten mit demselben Code bei. Sind alle da, drückt einer `N`. Seine `lobby_settings` gelten dann für
 alle, und die Spielerzahl steht fest. Teams für den Wettkampf und Vorschläge während des Runs gibt es
 in der Engine bereits. Eine Bedienoberfläche dafür fehlt noch (siehe PROGRESS.md).
+
+### Aufhol-Modus im Overlay
+
+Ist ein Mitspieler deiner Gruppe offline, erscheint ein gelb hinterlegter Kasten:
+- wer offline ist, seit wann, mit wie vielen Orden und wo zuletzt;
+- die Orden-Grenze („frei bis 3“) oder „Nächste Arena GESPERRT“;
+- ob im aktuellen Gebiet ein Fang erlaubt ist (dann ist die Gruppe sofort komplett) oder gesperrt;
+- in welchen Gebieten du noch fangen darfst (der Partner hat dort schon gefangen, du noch nicht);
+- der Hinweis, dass Tode beim Partner nachgetragen werden.
+
+### Komfort-Automatiken
+
+Beide Schalter werden in der Lobby gesetzt (`skip_prologue`, `skip_nickname` in `lobby_settings.changes`). Vor dem
+Run-Start gelten die Ersatzwerte unter `automation` in `config.lua`.
+
+- **Prolog überspringen:** Bei einem neuen Spielstand (kein Team, Spielzeit unter 2 Minuten) spielt das Script die
+  Eingabefolge aus dem Profil im Schnellvorlauf ab. Es hört auf, sobald das Profil-Merkmal „Spieler kann frei
+  laufen“ erfüllt ist, also am Spielzustand und nicht nach einer festen Framezahl. Danach wird der Name aus
+  `config.lua` in den Spielstand geschrieben (nur A–Z, a–z, 0–9, max. 7 Zeichen, nur mit getesteter Adresse).
+  **Eingabefolge erzeugen:** neues Spiel beginnen, Taste `K`, den Prolog von Hand bis zum ersten freien Schritt
+  durchspielen, Taste `K`. Die Datei `local/prolog_aufnahme_<CODE>.lua` als `prologue.inputs` ins Profil übernehmen.
+- **Spitznamen-Abfrage überspringen:** Erkennt das Profil die Abfrage (`nickname.prompt`), drückt das Script „Nein“
+  (B), höchstens fünfmal hintereinander.
+
+Ohne die nötigen Profilangaben bleiben beide Funktionen aus. Das Overlay sagt dann, was fehlt.
 
 ## Run-Übersicht
 

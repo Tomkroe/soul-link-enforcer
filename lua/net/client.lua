@@ -38,8 +38,24 @@ function Client.new(opts)
   self.started = self.now()
   self.last_ping = 0
   self.last_rx = 0
+  self.server_offset = 0    -- Serverzeit - eigene Zeit (für "offline seit")
   self:load_queue()
+  self:load_stats()
   return self
+end
+
+--- Todeszähler aus der lokalen Kopie, solange der Server noch nichts geliefert hat.
+function Client:load_stats()
+  if not (self.fs and self.stats_path) then return end
+  local ok, data = pcall(json.decode, self.fs.read(self.stats_path) or "")
+  if ok and type(data) == "table" then
+    self.stats = data
+    self.stats_local = true
+  end
+end
+
+function Client:server_now()
+  return self.now() + self.server_offset
 end
 
 function Client:load_queue()
@@ -116,7 +132,11 @@ function Client:handle(msg)
   elseif op == "state" then
     self.state = msg.state
     self.derived = msg.derived
-    self.stats = msg.stats
+    if msg.stats then
+      self.stats = msg.stats
+      self.stats_local = false
+    end
+    if msg.server_time then self.server_offset = msg.server_time - self.now() end
     if self.fs and self.stats_path and msg.stats then
       self.fs.write_atomic(self.stats_path, json.encode(msg.stats))
     end
@@ -131,9 +151,14 @@ end
 --- Einmal pro Prüfzyklus aufrufen (z. B. alle 10 Frames).
 function Client:poll()
   local now = self.now()
-  for _, msg in ipairs(self.transport:receive()) do
-    self.last_rx = now
-    self:handle(msg)
+  -- Mehrere Durchgänge, damit Antworten auf eben Gesendetes (z. B. welcome nach hello) sofort ankommen.
+  for _ = 1, 5 do
+    local msgs = self.transport:receive()
+    if #msgs == 0 then break end
+    for _, msg in ipairs(msgs) do
+      self.last_rx = now
+      self:handle(msg)
+    end
   end
   if self.transport.synced and now - self.last_ping >= Client.PING_MS then
     self.last_ping = now
@@ -152,6 +177,7 @@ end
 --- Verbindungsstatus als Text für das Overlay.
 function Client:status_text()
   if self.fatal then return "Fehler: " .. self.fatal end
+  if self.transport.label and self.welcomed then return self.transport.label end
   if not self.bridge_up then
     if self.now() - self.started > Client.BRIDGE_TIMEOUT_MS then
       return "Brücke antwortet nicht (läuft bridge.js?)"

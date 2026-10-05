@@ -14,6 +14,9 @@ local R = require("core.rules")
 local Enforce = require("app.enforce")
 local Overlay = require("app.overlay")
 local Backup = require("app.backup")
+local Inputs = require("app.inputs")
+local Automation = require("app.automation")
+local LocalHub = require("net.local_hub")
 
 local App = {}
 App.__index = App
@@ -73,19 +76,47 @@ function App.new(opts)
   end
   self.detect = Detect.new()
 
-  -- Netz
+  -- Netz: Server über die Brücke, oder Solo-Modus mit lokalem Vermittler (ohne Server)
   local root = opts.root
-  local dir = cfg.bridge and cfg.bridge.exchange_dir or (root .. "/bridge/exchange")
-  local session = string.format("%012.0f", self.now())
-  self.transport = Transport.new({ dir = dir, fs = self.fs, session = session, nonce = session .. cfg.player_name })
   local local_dir = root .. "/local"
-  self.client = Client.new({
-    transport = self.transport, name = cfg.player_name, lobby = cfg.lobby_code, now = self.now, fs = self.fs,
-    queue_path = local_dir .. "/warteschlange.json", stats_path = local_dir .. "/todeszaehler.json",
-  })
-  if cfg.bridge and cfg.bridge.autostart and opts.launch then
-    opts.launch({ node = cfg.bridge.node, root = root, url = cfg.server_url, dir = dir })
+  self.solo = cfg.mode == "solo"
+  local lobby = cfg.lobby_code
+  if self.solo then
+    local solo = cfg.solo or {}
+    self.transport = LocalHub.new({
+      fs = self.fs, dir = local_dir, name = cfg.player_name, now = self.now,
+      settings = cfg.lobby_settings, auto_start = solo.auto_start,
+    })
+    lobby = "SOLO"
+  else
+    local dir = cfg.bridge and cfg.bridge.exchange_dir or (root .. "/bridge/exchange")
+    local session = string.format("%012.0f", self.now())
+    self.transport = Transport.new({ dir = dir, fs = self.fs, session = session, nonce = session .. cfg.player_name })
+    if cfg.bridge and cfg.bridge.autostart and opts.launch then
+      opts.launch({ node = cfg.bridge.node, root = root, url = cfg.server_url, dir = dir })
+    end
   end
+  self.client = Client.new({
+    transport = self.transport, name = cfg.player_name, lobby = lobby, now = self.now, fs = self.fs,
+    queue_path = local_dir .. (self.solo and "/warteschlange_solo.json" or "/warteschlange.json"),
+    stats_path = local_dir .. "/todeszaehler.json",
+  })
+
+  -- Automatiken (Phase 4): Prolog überspringen, Spitznamen-Abfrage ablehnen, Eingabe-Aufnahme
+  self.local_dir = local_dir
+  self.inputs = Inputs.new()
+  self.recorder = nil
+  self.auto = Automation.new({
+    profile = self.profile, inputs = self.inputs,
+    read = function(name)
+      if not self.reader or not self.reader:entry(name) then return nil end
+      local ok, v = pcall(self.reader.read, self.reader, name, 16)
+      return ok and v or nil
+    end,
+    note = function(text, level) self:note(text, level) end,
+    set_speed = function(mode) return self.emu.set_speed and self.emu.set_speed(mode) end,
+    write_name = function(name) return self:write_trainer_name(name) end,
+  })
 
   -- Sicherungen
   local b = cfg.backups or {}
@@ -97,6 +128,24 @@ function App.new(opts)
     self.warnings[#self.warnings + 1] = "Sicherungen aus: save_path in config.lua fehlt"
   end
   return self
+end
+
+--- Spielername aus config.lua in den Spielstand schreiben (nur über den Schreibschutz).
+function App:write_trainer_name(name)
+  if not self.reader or not self.reader:entry("trainer_name") then return false, "Adresse fehlt im Profil" end
+  local ok, reason = self.guard:can_write("trainer_name")
+  if not ok then return false, reason end
+  local bytes, err = P.encode_gen4_name(name)
+  if not bytes then return false, err end
+  self.backup:before_first_write(0)
+  return self.guard:write_bytes("trainer_name", 0, bytes)
+end
+
+--- Einstellung aus dem Run (Lobby), sonst Ersatzwert aus config.lua.
+function App:setting(key)
+  local state = self.client.state
+  if state and state.settings and state.settings[key] ~= nil then return state.settings[key] end
+  return (self.cfg.automation or {})[key] == true
 end
 
 function App:note(text, level)
@@ -135,6 +184,8 @@ function App:handle_keys()
   if self:key_pressed(hk.overlay) then self.show.overlay = not self.show.overlay end
   if self:key_pressed(hk.graveyard) then self.show.graveyard = not self.show.graveyard end
   if self:key_pressed(hk.areas) then self.show.areas = not self.show.areas end
+  if self:key_pressed(hk.groups) then self.show.groups = not self.show.groups end
+  if self:key_pressed(hk.record) then self:toggle_recording() end
   if self:key_pressed(hk.confirm) and self.absence then
     self.absence = nil
     self.client:send_event({ type = "ack_absence" })
@@ -162,6 +213,24 @@ function App:handle_keys()
     self:note("Sperre für 30 s ausgesetzt (Weg zum PC).", "warn")
   end
   self.prev_keys = self.keys
+end
+
+--- Eingabe-Aufnahme (für die Prolog-Eingabefolge im Profil) starten/beenden.
+function App:toggle_recording()
+  if not self.recorder then
+    self.recorder = Inputs.recorder()
+    self:note("Aufnahme läuft – Prolog jetzt von Hand durchspielen, danach Taste " .. tostring((self.cfg.hotkeys or {}).record) .. ".", "warn")
+    return
+  end
+  local path = self.local_dir .. "/prolog_aufnahme_" .. tostring(self.game_code) .. ".lua"
+  local src = "-- Aufnahme " .. os.date("%Y-%m-%d %H:%M") .. ": als prologue.inputs ins Profil übernehmen\nreturn "
+    .. self.recorder:source() .. "\n"
+  self.recorder = nil
+  if self.fs.write_atomic(path, src) then
+    self:note("Aufnahme gespeichert: " .. path)
+  else
+    self:note("Aufnahme konnte nicht gespeichert werden: " .. path, "warn")
+  end
 end
 
 --- Älteste offene Abstimmung, bei der man selbst noch nicht zugestimmt hat.
@@ -203,6 +272,11 @@ function App:tick()
     for _, ev in ipairs(self.detect:update(snap, dead)) do self.client:send_event(ev) end
   end
 
+  if snap and self.profile then
+    self.auto:prologue_tick(self:setting("skip_prologue"), snap, self.cfg.player_name)
+    self.auto:nickname_tick(self:setting("skip_nickname"))
+  end
+
   self.plan = Enforce.plan(state, pid, snap, {
     absence_pending = self.absence ~= nil, override_until = self.override_until, now = self.now(),
   })
@@ -220,13 +294,19 @@ end
 
 function App:frame()
   self:handle_keys()
+  if self.recorder and self.emu.get_joypad then self.recorder:frame(self.emu.get_joypad()) end
   if self.emu.frame() % App.TICK_FRAMES == 0 then self:tick() end
-  if self.plan and self.plan.lock then
+  -- Automatik-Eingaben haben Vorrang vor der Sperre (sie sind Teil der Regeldurchsetzung bzw. des Komforts).
+  local auto_keys = self.inputs:next_frame()
+  if auto_keys then
+    self.emu.set_joypad(auto_keys)
+  elseif self.plan and self.plan.lock then
     self.emu.set_joypad(Enforce.joypad_mask(self.plan, self.snap and self.snap.in_menu) or {})
   end
 end
 
-local COLORS = { weiss = "white", gelb = "yellow", rot = "red", gruen = "green", grau = "gray" }
+local COLORS = { weiss = "white", gelb = "yellow", rot = "red", gruen = "green", grau = "gray", schwarz = "black" }
+local BG = { gelb = "#FFD84AE0", rot = "#FF6060E0" }
 
 function App:profile_info()
   if not self.profile then return nil end
@@ -258,6 +338,9 @@ function App:lines()
     profile_info = self:profile_info(),
     stats = self.client.stats, lock_reasons = self.plan and self.plan.lock and self.plan.reasons or nil,
     messages = msgs, level_cap = cap, compact = self.cfg.overlay and self.cfg.overlay.compact,
+    area_key = self.snap and self.snap.area and self.snap.area.key or (state and pid and state.players[pid]
+      and state.players[pid].area.key),
+    now_server = self.client:server_now(), extra = self:extra_lines(),
   })
   local hk = self.cfg.hotkeys or {}
   if state and state.phase == "lobby" then
@@ -278,6 +361,9 @@ function App:lines()
     end
     lines[#lines + 1] = { text = "Bestätigen mit Taste " .. tostring((self.cfg.hotkeys or {}).confirm), color = "gelb" }
   end
+  if self.show.groups and state then
+    for _, l in ipairs(Overlay.groups(state, pid)) do lines[#lines + 1] = l end
+  end
   if self.show.graveyard and state then
     for _, l in ipairs(Overlay.graveyard(state, pid)) do lines[#lines + 1] = l end
   end
@@ -287,12 +373,24 @@ function App:lines()
   return lines
 end
 
+function App:extra_lines()
+  local out = {}
+  local s = self.auto:status_line()
+  if s then out[#out + 1] = { text = s, color = "gelb" } end
+  if self.recorder then
+    out[#out + 1] = { text = "AUFNAHME läuft (Taste " .. tostring((self.cfg.hotkeys or {}).record) .. " beendet)", color = "rot" }
+  end
+  return out
+end
+
 function App:draw()
   if not self.show.overlay then return end
   local o = self.cfg.overlay or {}
   local x, y = o.x or 2, o.y or 2
   for i, l in ipairs(self:lines()) do
-    self.emu.text(x, y + (i - 1) * 9, l.text, COLORS[l.color] or "white")
+    local ly = y + (i - 1) * 9
+    if l.bg and BG[l.bg] then self.emu.box(x - 1, ly - 1, x + 252, ly + 8, BG[l.bg], BG[l.bg]) end
+    self.emu.text(x, ly, l.text, COLORS[l.color] or "white")
   end
 end
 

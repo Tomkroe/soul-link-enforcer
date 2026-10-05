@@ -99,6 +99,14 @@ Vorbereitung: `backups.save_path` setzen, `write_enabled = true`, nur `party` au
 - [ ] Unbekannte ROM (anderes Spiel laden): kein einziger Schreibzugriff, Overlay „LESEMODUS“.
 - [ ] Adresse auf `tested = false` zurücksetzen → Schreiben wird abgelehnt (Overlay-Meldung).
 
+## Solo-Modus
+
+- [ ] `config.lua`: `mode = "solo"`. Nur `lua/main.lua` starten, kein Server, kein Brückenfenster.
+      Overlay: „Soul Link – Solo (ohne Server)“, Run läuft automatisch mit der Vorlage aus `lobby_settings`.
+- [ ] Fang → Gruppe sofort komplett (Taste H). Tod → Friedhof (F), „Tode: Tom 1“.
+- [ ] Emulator neu starten → derselbe Zustand (Tote bleiben tot), `local/solo_<name>.json` vorhanden.
+- [ ] Nach verlorenem Run: Taste N → neuer Versuch, Versuchszähler +1.
+
 ## 4. Komfort
 
 - [ ] Sicherung bei neuem Orden (`…_orden<N>_orden.dsv`) und alle 15 Minuten; höchstens 20 Dateien.
@@ -106,3 +114,14 @@ Vorbereitung: `backups.save_path` setzen, `write_enabled = true`, nur `party` au
 - [ ] Todeszähler im Overlay („Tode: …“) und in `local/todeszaehler.json`, auch nach Neustart.
 - [ ] Overlay mit Taste O aus/ein, Friedhof mit F, Gebiete mit G.
 - [ ] Partner-Zeile im Overlay: Gebiet, Orden, „im Kampf“, OFFLINE.
+- [ ] Aufhol-Kasten (gelb hinterlegt) bei offline-Partner: „offline seit“, Orden-Grenze, Fang hier erlaubt/gesperrt,
+      Liste freier Fanggebiete. Text passt in die Bildschirmbreite.
+- [ ] Gruppen-Ansicht mit H, eigene Team-Monster mit *.
+- [ ] Eingabe-Aufnahme: neues Spiel, K, Prolog bis zum ersten freien Schritt, K →
+      `local/prolog_aufnahme_CPUD.lua` entsteht. Inhalt als `prologue.inputs` ins Profil.
+- [ ] Merkmal „kann frei laufen“ finden (z. B. Bewegungs-/Menü-Sperre im RAM) und als `prologue.done` eintragen.
+- [ ] Prolog überspringen (`skip_prologue = true`): neues Spiel, Schnellvorlauf startet, endet im Zimmer,
+      Overlay „Prolog übersprungen“. Läuft der Schnellvorlauf (`emu.speedmode`) in dieser DeSmuME-Version?
+- [ ] Name aus `config.lua` erscheint im Trainerpass (braucht `trainer_name`-Adresse, getestet).
+- [ ] Spitznamen-Abfrage: Merkmal `nickname.prompt` finden; mit `skip_nickname = true` wird nach dem Fang
+      automatisch „Nein“ gewählt.

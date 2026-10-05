@@ -178,6 +178,33 @@ local function decode_gen4_name(b, off, len)
   return table.concat(chars)
 end
 
+--- Kodiert einen Namen in die Gen-4-Zeichentabelle (nur A–Z, a–z, 0–9, Leerzeichen; getestet: nein).
+-- Rückgabe: Byte-Liste (u16 je Zeichen, 0xFFFF als Ende, auf slots Zeichen aufgefüllt) oder nil, Fehler.
+function P.encode_gen4_name(name, max_len, slots)
+  max_len = max_len or 7
+  slots = slots or (max_len + 1)
+  local codes = {}
+  for i = 1, #name do
+    local c = name:byte(i)
+    local v
+    if c >= 48 and c <= 57 then v = 0x121 + c - 48
+    elseif c >= 65 and c <= 90 then v = 0x12B + c - 65
+    elseif c >= 97 and c <= 122 then v = 0x145 + c - 97
+    elseif c == 32 then v = 0x1DE
+    else return nil, "Zeichen '" .. name:sub(i, i) .. "' wird nicht unterstützt (nur A–Z, a–z, 0–9)" end
+    codes[#codes + 1] = v
+  end
+  if #codes == 0 then return nil, "leerer Name" end
+  if #codes > max_len then return nil, "Name länger als " .. max_len .. " Zeichen" end
+  local bytes = {}
+  for i = 1, slots do
+    local v = codes[i] or 0xFFFF
+    bytes[#bytes + 1] = v % 256
+    bytes[#bytes + 1] = math.floor(v / 256)
+  end
+  return bytes
+end
+
 --- Liest die wichtigen Felder eines entschlüsselten Datensatzes.
 function P.parse(plain, gen)
   local pid = P.u32(plain, 0x00)

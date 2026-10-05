@@ -52,6 +52,37 @@ function R.gym_allowed(state, pid)
   return true, ""
 end
 
+--- Alles, was das Overlay im Aufhol-Modus zeigt (Regeln nur hier, Anzeige in app/overlay.lua).
+-- area_key: aktuelles Gebiet des Spielers (optional). Rückgabe:
+-- { active, offline = { {player, name, badges, area, last_seen}, ... }, badge_limit, gym_ok, gym_reason,
+--   catch_here = { ok, reason, kind } | nil, free_areas = { {key, name}, ... } }
+function R.catchup_info(state, pid, area_key)
+  local active, off = R.catchup_active(state, pid)
+  local info = { active = active, offline = {}, free_areas = {} }
+  if not active then return info end
+  local limit
+  for _, q in ipairs(off) do
+    local p = state.players[q]
+    info.offline[#info.offline + 1] = {
+      player = q, name = p.name, badges = p.badges, area = p.area.name or "", last_seen = p.last_seen,
+    }
+    if not limit or p.badges < limit then limit = p.badges end
+  end
+  info.badge_limit = limit
+  info.gym_ok, info.gym_reason = R.gym_allowed(state, pid)
+  if area_key then
+    local ok, reason, kind = R.catch_allowed(state, pid, area_key)
+    info.catch_here = { ok = ok, reason = reason, kind = kind }
+  end
+  local team = M.team_of(state, pid)
+  for _, key in ipairs(team.area_order) do
+    if R.catch_allowed(state, pid, key) then
+      info.free_areas[#info.free_areas + 1] = { key = key, name = team.areas[key].name }
+    end
+  end
+  return info
+end
+
 --- Kennungen aller toten Monster des Spielers (für das Halten auf 0 KP).
 function R.dead_uids(state, pid)
   local p = state.players[pid]

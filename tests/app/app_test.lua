@@ -277,6 +277,88 @@ T.test("Abstimmung per Taste", function()
   T.eq(sent[#sent].event.id, "v1")
 end)
 
+T.test("Solo-Modus im Script: ohne Brücke, Run läuft, Ereignisse werden lokal angewendet", function()
+  package.loaded["profiles.TEST"] = PROFILE
+  local emu = Emu.fake({ game_code = "TEST" })
+  local mem = FS.memory()
+  local launched = 0
+  local cfg = { mode = "solo", player_name = "Tom", lobby_code = "X", write_enabled = false, hotkeys = {},
+    lobby_settings = { preset = "locker" } }
+  local app = App.new({ config = cfg, emu = emu, fs = mem, root = "/proj", now = function() return 1000 end,
+    launch = function() launched = launched + 1 end })
+  T.eq(launched, 0)
+  emu.write32(0x02002000 - 8, 6)
+  emu.write32(0x02002000 - 4, 1)
+  write_bytes(emu, 0x02002000, party_mon(305419896, 20))
+  emu.write16(0x02003000, 412)
+  emu.write16(0x02003008, 5)
+  app:tick()
+  app:tick()
+  local st = app.client.state
+  T.eq(st.phase, "running")
+  T.eq(st.settings.preset, "locker")
+  T.eq(st.players.tom.area.key, "412")
+  T.eq(#st.players.tom.party, 1)
+  local all = {}
+  for _, l in ipairs(app:lines()) do all[#all + 1] = l.text end
+  T.ok(table.concat(all, "\n"):find("Solo %(ohne Server%)"))
+  T.no(table.concat(all, "\n"):find("AUFHOL"), "Solo hat nie Aufhol-Modus")
+end)
+
+T.test("Aufhol-Kasten mit Hintergrund, Gruppen-Ansicht per Taste", function()
+  local app, emu, mem = make_app()
+  local H = require("core.helpers")
+  local s = H.run(2)
+  H.catch_all(s, H.AREA1, "a")
+  s:ok("status", "ben", { badges = 1, area = H.AREA2 })
+  s:ok("offline", "ben")
+  s.state.players.anna.area = { key = "201", name = "Route 201" }
+  deliver(app, mem, { { op = "welcome", player = "anna", last_seq = 0 },
+    { op = "state", state = s.state, server_time = s.t + 125000 } })
+  app:tick()
+  local lines = app:lines()
+  local boxed, texts = 0, {}
+  for _, l in ipairs(lines) do
+    if l.bg == "gelb" then boxed = boxed + 1 end
+    texts[#texts + 1] = l.text
+  end
+  local all = table.concat(texts, "\n")
+  T.ok(boxed >= 5, all)
+  T.ok(all:find("AUFHOL%-MODUS"), all)
+  T.ok(all:find("Ben offline seit 2 min"), all)
+  T.ok(all:find("Orden: frei bis 1"), all)
+  T.ok(all:find("Kein Gebiet zum Fangen frei"), all)
+  for _, l in ipairs(lines) do T.ok(#l.text <= 42 + 2, "Zeile zu lang: " .. l.text) end
+  emu.pressed = { H = true }
+  app.cfg.hotkeys.groups = "H"
+  app:frame()
+  T.ok(app.show.groups)
+  local found = false
+  for _, l in ipairs(app:lines()) do if l.text:find("Route 201: Arta / Arta %[komplett%]") then found = true end end
+  T.ok(found)
+  emu.texts = {}
+  app:draw()
+  T.ok(#emu.texts > 5)
+end)
+
+T.test("Eingabe-Aufnahme per Taste speichert eine Datei fürs Profil", function()
+  local app, emu, mem = make_app()
+  app.cfg.hotkeys.record = "K"
+  emu.pressed = { K = true }
+  app:frame()
+  T.ok(app.recorder)
+  emu.pressed = {}
+  emu.pad = { A = true }
+  app:frame()
+  emu.pad = {}
+  app:frame()
+  emu.pressed = { K = true }
+  app:frame()
+  T.eq(app.recorder, nil)
+  local src = mem.files["/proj/local/prolog_aufnahme_TEST.lua"]
+  T.ok(src and src:find('keys = "A", frames = 1'), tostring(src))
+end)
+
 T.test("Selbsttest der Schreibfunktionen", function()
   T.ok(App.selftest())
 end)

@@ -68,6 +68,15 @@ function Emu.desmume()
   a.box = function(x1, y1, x2, y2, fill, line) gui.box(x1, y1, x2, y2, fill, line) end
   a.keys = function() return input.get() end
   a.set_joypad = function(t) joypad.set(t) end -- getestet: nein (Tastennamen und false-Wirkung prüfen)
+  a.get_joypad = function() return joypad.get() end
+  -- Schnellvorlauf: emu.speedmode gibt es nicht in jeder DeSmuME-Version (getestet: nein)
+  a.set_speed = function(mode)
+    if emu.speedmode then
+      pcall(emu.speedmode, mode == "turbo" and "turbo" or "normal")
+      return true
+    end
+    return false
+  end
   a.resolve = function(entry) return Emu.resolve_with(a.read32, entry) end
   return a
 end
@@ -94,6 +103,10 @@ function Emu.fake(opts)
   a.box = function() end
   a.keys = function() return a.pressed end
   a.set_joypad = function(t) a.joypad = t end
+  a.pad = {}
+  a.get_joypad = function() return a.pad end
+  a.speed = "normal"
+  a.set_speed = function(mode) a.speed = mode return true end
   a.resolve = function(entry) return Emu.resolve_with(a.read32, entry) end
   if opts.game_code then
     for i = 1, 4 do mem[Emu.GAME_CODE_ADDR + i - 1] = opts.game_code:byte(i) end

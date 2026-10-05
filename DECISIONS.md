@@ -130,3 +130,27 @@ Sprachversionen abweichen können. Deshalb:
 - Header-Adresse: `0x023FFE0C` (so in beiden Quellen) statt der Spiegeladresse `0x027FFE0C`.
 - Arena-Level für das Level-Cap stammen aus allgemeinem Spielwissen und sind als ungeprüft markiert. Das
   Overlay zeigt „(ungeprüft)“ hinter dem Cap.
+
+## E14 – Solo-Modus: lokaler Vermittler im Script statt eigener Regeln (05.10.2026)
+
+Solo nutzt dieselbe Regel-Engine und dasselbe Protokoll wie der Mehrspielerbetrieb. `net/local_hub.lua`
+verhält sich für den Client wie ein Transport, führt `core.engine` direkt in DeSmuME (Lua 5.1) aus und speichert
+den Zustand in `local/solo_<name>.json`. Dadurch gibt es keinen Sonderfall in den Regeln (Gruppen der Größe 1),
+keinen zweiten Code-Pfad im Script und keinen Server-Zwang beim Alleinspielen. Was ohne Server fehlt
+(Run-Übersicht, Discord), bekommt man, indem man allein über den Server spielt.
+
+## E15 – Aufhol-Kasten: Inhalte aus core, nur Darstellung im Script (05.10.2026)
+
+`core.rules.catchup_info` liefert Orden-Grenze, Fang-Erlaubnis im aktuellen Gebiet, freie Fanggebiete und
+Abwesende. `app/overlay.lua` stellt nur dar (gelber Hintergrund, Umbruch auf 42 Zeichen für die DS-Breite).
+„Offline seit“ rechnet mit der Serverzeit (Versatz aus der letzten Zustandsnachricht), damit unterschiedliche
+Uhren der PCs nicht stören.
+
+## E16 – Automatiken über Eingabefolgen, Ende am Spielzustand (05.10.2026)
+
+Prolog und Spitznamen-Abfrage werden über Tasteneingaben gesteuert, nicht über Speicher-Hacks. Die Eingabefolge
+entsteht per Aufnahme (Taste K) beim ersten Durchspielen und steht danach im Profil. Beendet wird über ein
+Merkmal im Spielzustand (`prologue.done`); läuft die Folge vorher aus, schaltet das Script zurück auf normale
+Geschwindigkeit und meldet es. Automatik-Eingaben haben Vorrang vor der Eingabesperre. Den Namen aus
+`config.lua` schreibt das Script nach dem Prolog in den Spielstand, weil die Bildschirmtastatur je Sprache
+anders aufgebaut ist; das geschieht nur über den Schreibschutz und mit getesteter Adresse.

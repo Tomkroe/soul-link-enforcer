@@ -7,6 +7,7 @@ return {
   "core.catchup_test",
   "core.api_test",
   "net.client_test",
+  "net.local_hub_test",
   "mem.pkm_test",
   "mem.guard_test",
   "mem.detect_test",
@@ -14,6 +15,7 @@ return {
   "mem.reader_test",
   "app.enforce_test",
   "app.backup_test",
+  "app.automation_test",
   "app.app_test",
   "app.desmume_test",
 }

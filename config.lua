@@ -1,6 +1,12 @@
 -- Einstellungen für das Emulator-Script. Jeder Spieler passt diese Datei für sich an.
 return {
-  -- Dein Name (so erscheinst du bei den anderen) und der gemeinsame Lobby-Code
+  -- Spielmodus: "server" (mit Mitspielern über den Vermittlungsserver) oder "solo" (allein, ganz ohne Server
+  -- und Brücke; Regeln, Todeszähler und Sicherungen laufen lokal, Zustand in local/solo_<name>.json)
+  mode = "server",
+  solo = { auto_start = true },   -- Solo: Run beim ersten Start automatisch beginnen
+
+  -- Dein Name (so erscheinst du bei den anderen; Spielstand-Name bei "Prolog überspringen", max. 7 Zeichen)
+  -- und der gemeinsame Lobby-Code
   player_name = "Spieler1",
   lobby_code = "SOUL01",
 
@@ -28,7 +34,12 @@ return {
     start = "N",        -- Lobby: Run starten / nach Run-Ende: neuer Versuch
     vote_yes = "Y",     -- offene Abstimmung annehmen
     vote_no = "U",      -- offene Abstimmung ablehnen
+    groups = "H",       -- Gruppen-Ansicht
+    record = "K",       -- Eingabe-Aufnahme starten/beenden (für die Prolog-Eingabefolge im Profil)
   },
+
+  -- Ersatzwerte für Automatiken, solange noch kein Run-Zustand da ist (sonst gelten die Lobby-Einstellungen)
+  automation = { skip_prologue = false, skip_nickname = false },
 
   -- Einstellungen, die beim Run-Start (Taste N) für alle gesetzt werden.
   -- Vorlagen: "locker", "klassisch", "hardcore". Einzelne Schalter danach in changes, z. B.
