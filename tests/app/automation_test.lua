@@ -125,6 +125,8 @@ T.test("Name in Gen-4-Zeichen kodieren", function()
   T.eq(P.u16(b, 0), 0x12B + 19) -- T
   T.eq(P.u16(b, 6), 0x121 + 7)  -- 7
   T.eq(P.u16(b, 8), 0xFFFF)
-  T.eq(select(2, P.encode_gen4_name("Jürgen")):find("nicht unterstützt") ~= nil, true)
+  T.ok(P.encode_gen4_name("Jürgen"), "Umlaute erlaubt")
+  T.eq(P.u16(P.encode_gen4_name("Jürgen"), 2), 0x15F + (0xFC - 0xC0))
+  T.eq(select(2, P.encode_gen4_name("Tom€")):find("nicht unterstützt") ~= nil, true)
   T.eq(select(2, P.encode_gen4_name("Achtzehn")):find("länger") ~= nil, true)
 end)

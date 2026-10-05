@@ -31,6 +31,10 @@ return {
     },
     party_count = { rel = "party", offset = -4, width = 32, tested = false },
 
+    -- Trainer-Daten liegen laut [IM] direkt vor dem Team (Orden bei Basis +0x96, Team bei +0xB4). Daraus
+    -- abgeleitet (Aufbau Name 16 Byte, ID, Geld, Geschlecht, Region, Orden): Spielername bei Team -0x38.
+    trainer_name = { rel = "party", offset = -0x38, tested = false },
+
     -- Orden (Bitfeld, 8 Bit). [IM] Basis +0x96 = Team -0x1E
     badges = { rel = "party", offset = -0x1E, width = 8, tested = false },
 

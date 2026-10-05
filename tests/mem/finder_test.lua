@@ -104,4 +104,22 @@ T.test("Game-Code an der Header-Adresse", function()
   T.eq(Emu.fake().game_code(), nil)
 end)
 
+
+T.test("Spielzeit-Suche: Wert, der jede Sekunde um 1 wächst", function()
+  local function window(sec_total, noise)
+    local b = {}
+    for i = 1, 64 do b[i] = (i * 7 + noise) % 256 end
+    local h, m, s = math.floor(sec_total / 3600), math.floor(sec_total / 60) % 60, sec_total % 60
+    b[21], b[22], b[23], b[24] = h % 256, math.floor(h / 256), m, s -- Offset 20
+    return b
+  end
+  local samples = {}
+  for i = 0, 3 do samples[#samples + 1] = { bytes = window(3600 * 2 + 59 * 60 + 58 + i, i), dt = 1 } end
+  local c = Finder.playtime_candidates(samples)
+  T.eq(#c, 1)
+  T.eq(c[1].offset, 20)
+  T.eq(c[1].seconds, 3600 * 3 + 1, "Überlauf über Minute und Stunde")
+  T.eq(#Finder.playtime_candidates({ samples[1], samples[2] }), 0, "zu wenige Proben")
+end)
+
 return { party_mon = party_mon, put_party = put_party }

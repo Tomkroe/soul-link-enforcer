@@ -127,6 +127,35 @@ function Finder.block_equals(emu, addr, blk)
   return true
 end
 
+--- Spielzeit-Suche: samples = Liste { bytes = {...}, dt = Sekunden seit der vorigen Probe } eines Speicherfensters.
+-- Kandidat ist ein 4-Byte-Wert (u16 Stunden, u8 Minuten, u8 Sekunden), dessen Gesamtsekunden zwischen
+-- allen Proben um genau dt (±1) wachsen. Rückgabe: Liste { offset, seconds } (offset im Fenster).
+function Finder.playtime_candidates(samples)
+  local out = {}
+  if #samples < 3 then return out end
+  local size = #samples[1].bytes
+  local function total(b, o)
+    local h = b[o + 1] + b[o + 2] * 256
+    local m, sec = b[o + 3], b[o + 4]
+    if m > 59 or sec > 59 or h > 9999 then return nil end
+    return h * 3600 + m * 60 + sec
+  end
+  for o = 0, size - 4, 2 do
+    local ok = true
+    local prev = total(samples[1].bytes, o)
+    if not prev then ok = false end
+    for i = 2, #samples do
+      if not ok then break end
+      local cur = total(samples[i].bytes, o)
+      local dt = samples[i].dt
+      if not cur or math.abs((cur - prev) - dt) > 1 or cur == prev then ok = false end
+      prev = cur
+    end
+    if ok then out[#out + 1] = { offset = o, seconds = prev } end
+  end
+  return out
+end
+
 --- Sucht Zeiger, die auf base - offset zeigen, für bekannte Offsets (um eine Zeigerkette zu bestätigen).
 -- Gibt eine Liste { {ptr_addr, offset}, ... } zurück. Durchsucht nur [from, to).
 function Finder.find_pointers(emu, target, offsets, from, to)

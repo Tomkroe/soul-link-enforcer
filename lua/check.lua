@@ -71,6 +71,7 @@ local function write_report(d)
     lines[#lines + 1] = name .. ": " .. tostring(d[name])
   end
   lines[#lines + 1] = rando_info
+  lines[#lines + 1] = search.playtime or "Spielzeit: (noch kein Kandidat – check.lua einige Sekunden laufen lassen)"
   for _, h in ipairs(search.pointers or {}) do
     lines[#lines + 1] = string.format("Zeiger auf Team-Basis: [%s] + 0x%s", hex(h.ptr), P.hex(h.offset))
   end
@@ -159,6 +160,27 @@ gui.register(function()
   elseif not search.written then
     search.written = true
     write_report(d)
+  end
+  -- Spielzeit-Suche: Fenster um das Team alle 60 Frames (1 Spielsekunde) lesen
+  if frames % 60 == 0 then
+    search.pt = search.pt or {}
+    local from = d.party_addr - 0x800
+    table.insert(search.pt, { bytes = adapter.read_bytes(from, 0x900), dt = 1 })
+    while #search.pt > 4 do table.remove(search.pt, 1) end
+    local cands = Finder.playtime_candidates(search.pt)
+    if #cands > 0 and #cands <= 4 then
+      local parts = {}
+      for _, c in ipairs(cands) do
+        local rel = c.offset - 0x800
+        parts[#parts + 1] = string.format("Team %s0x%s = %d:%02d:%02d", rel < 0 and "-" or "+", P.hex(math.abs(rel)),
+          math.floor(c.seconds / 3600), math.floor(c.seconds / 60) % 60, c.seconds % 60)
+      end
+      search.playtime = "Spielzeit-Kandidat: " .. table.concat(parts, ", ")
+    end
+  end
+  if search.playtime then
+    gui.text(2, y, search.playtime, "white")
+    y = y + 9
   end
   gui.text(2, y, "Team: " .. hex(d.party_addr) .. " (" .. tostring(d.party_source) .. "), Anzahl " .. tostring(d.party_count), "green")
   y = y + 9

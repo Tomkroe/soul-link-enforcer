@@ -157,48 +157,39 @@ local function decode_gen5_name(b, off, len)
   return table.concat(chars)
 end
 
--- Gen 4 nutzt eine eigene Zeichentabelle. Hier nur Ziffern und Buchstaben (getestet: nein).
+-- Gen 4 nutzt eine eigene Zeichentabelle (mem/charset.lua, getestet: nein).
 local function decode_gen4_name(b, off, len)
-  local chars = {}
-  for i = 0, len - 1 do
-    local c = P.u16(b, off + i * 2)
-    if c == 0xFFFF then break end
-    if c >= 0x121 and c <= 0x12A then
-      chars[#chars + 1] = string.char(48 + c - 0x121)
-    elseif c >= 0x12B and c <= 0x144 then
-      chars[#chars + 1] = string.char(65 + c - 0x12B)
-    elseif c >= 0x145 and c <= 0x15E then
-      chars[#chars + 1] = string.char(97 + c - 0x145)
-    elseif c == 0x1DE then
-      chars[#chars + 1] = " "
-    else
-      chars[#chars + 1] = "?"
-    end
-  end
-  return table.concat(chars)
+  local codes = {}
+  for i = 0, len - 1 do codes[#codes + 1] = P.u16(b, off + i * 2) end
+  return require("mem.charset").decode_gen4(codes)
 end
 
---- Kodiert einen Namen in die Gen-4-Zeichentabelle (nur A–Z, a–z, 0–9, Leerzeichen; getestet: nein).
+--- Kodiert einen Namen in die Gen-4-Zeichentabelle (mem/charset.lua, auch Umlaute; getestet: nein).
 -- Rückgabe: Byte-Liste (u16 je Zeichen, 0xFFFF als Ende, auf slots Zeichen aufgefüllt) oder nil, Fehler.
 function P.encode_gen4_name(name, max_len, slots)
   max_len = max_len or 7
   slots = slots or (max_len + 1)
+  local rev = {}
+  for code, ch in pairs(require("mem.charset").GEN4) do rev[ch] = code end
   local codes = {}
-  for i = 1, #name do
-    local c = name:byte(i)
-    local v
-    if c >= 48 and c <= 57 then v = 0x121 + c - 48
-    elseif c >= 65 and c <= 90 then v = 0x12B + c - 65
-    elseif c >= 97 and c <= 122 then v = 0x145 + c - 97
-    elseif c == 32 then v = 0x1DE
-    else return nil, "Zeichen '" .. name:sub(i, i) .. "' wird nicht unterstützt (nur A–Z, a–z, 0–9)" end
-    codes[#codes + 1] = v
+  local i = 1
+  while i <= #name do
+    local found
+    for len = 3, 1, -1 do
+      local ch = name:sub(i, i + len - 1)
+      if #ch == len and rev[ch] then found = ch break end
+    end
+    if not found then
+      return nil, "Zeichen '" .. name:sub(i, i) .. "' wird nicht unterstützt"
+    end
+    codes[#codes + 1] = rev[found]
+    i = i + #found
   end
   if #codes == 0 then return nil, "leerer Name" end
   if #codes > max_len then return nil, "Name länger als " .. max_len .. " Zeichen" end
   local bytes = {}
-  for i = 1, slots do
-    local v = codes[i] or 0xFFFF
+  for k = 1, slots do
+    local v = codes[k] or 0xFFFF
     bytes[#bytes + 1] = v % 256
     bytes[#bytes + 1] = math.floor(v / 256)
   end
