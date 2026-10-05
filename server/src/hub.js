@@ -102,6 +102,7 @@ class Hub {
       case 'hello': return this.hello(conn, msg);
       case 'ping': return this.send(conn, { op: 'pong', t: this.now() });
       case 'event': return this.clientEvent(conn, msg);
+      case 'reset': return this.resetRun(conn);
       case 'template_save': return this.saveTemplate(conn, msg);
       default: return this.send(conn, { op: 'error', message: `Unbekannte Operation: ${msg.op}` });
     }
@@ -169,6 +170,13 @@ class Hub {
     }
     const result = this.apply(lobby, { ...ev, player: conn.player }, seq);
     this.send(conn, { op: 'ack', seq, error: result.error || undefined });
+  }
+
+  // Run zurücksetzen (aus der Übersicht erlaubt): zurück in die Lobby, ohne Server-Neustart.
+  resetRun(conn) {
+    const lobby = conn.lobby && this.lobbies.get(conn.lobby);
+    if (!lobby) return this.send(conn, { op: 'error', message: 'Keine Lobby zum Zurücksetzen.' });
+    this.apply(lobby, { type: 'reset_run' });
   }
 
   async saveTemplate(conn, msg) {

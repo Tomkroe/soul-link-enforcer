@@ -74,7 +74,16 @@ function setConn(text, cls) {
   const el = $('#conn');
   el.textContent = text;
   el.className = `pill ${cls}`;
+  const rb = $('#resetbtn');
+  if (rb) rb.hidden = cls !== 'pill-on';
 }
+
+$('#resetbtn').addEventListener('click', () => {
+  if (!ws || ws.readyState !== 1) return;
+  if (confirm('Run wirklich zurücksetzen? Alle gehen zurück in die Lobby; der Fortschritt des aktuellen Versuchs geht verloren.')) {
+    ws.send(JSON.stringify({ op: 'reset' }));
+  }
+});
 
 // Verbindung -------------------------------------------------------------------
 

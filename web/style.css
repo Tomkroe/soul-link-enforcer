@@ -35,6 +35,7 @@ h2::before { content: ""; width: 10px; height: 10px; border-radius: 3px; backgro
 #lobby { width: 110px; text-transform: uppercase; }
 button { font: inherit; font-weight: 600; padding: 8px 16px; border: 0; border-radius: 8px; background: #fff; color: var(--primary); cursor: pointer; box-shadow: var(--shadow); }
 button:hover { filter: brightness(.97); }
+button.danger { background: var(--bad); color: #fff; }
 
 main { padding: 16px; display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr)); max-width: 1440px; margin: 0 auto; }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; min-width: 0; box-shadow: var(--shadow); }

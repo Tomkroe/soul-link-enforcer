@@ -410,6 +410,18 @@ function handlers.new_attempt(ctx, ev)
   ctx:log("lobby", "Zurück in der Lobby für Versuch " .. U.num(state.attempt + 1) .. ".")
 end
 
+-- Reset aus der Übersicht: aus jeder Phase zurück in die Lobby (Spieler bleiben registriert), damit
+-- ein neuer Run sauber gestartet werden kann, ohne den Server neu zu starten.
+function handlers.reset_run(ctx, ev)
+  local state = ctx.state
+  state.phase = "lobby"
+  state.teams = U.map()
+  state.team_order = U.list()
+  for _, pid in ipairs(state.order) do M.reset_player_run(state.players[pid]) end
+  ctx:log("lobby", "Run zurückgesetzt – zurück in der Lobby.")
+  ctx:notify("Run wurde zurückgesetzt – zurück in der Lobby.")
+end
+
 -- Verbindung --------------------------------------------------------------
 
 function handlers.online(ctx, ev)

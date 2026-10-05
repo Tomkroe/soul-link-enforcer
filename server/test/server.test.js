@@ -29,6 +29,23 @@ test('Lobby per Code: zwei Spieler treten bei, Run startet', async () => {
   }
 });
 
+test('Reset-Button: Run aus der Übersicht (Zuschauer) zurück in die Lobby', async () => {
+  const { srv, url } = await startServer();
+  try {
+    const { a, b } = await twoPlayers(url);
+    await a.event({ type: 'start_run' });
+    await b.waitFor((m) => m.op === 'state' && m.state.phase === 'running');
+    const v = await connect(url, { role: 'viewer', lobby: 'ABC123' });
+    v.send({ op: 'reset' });
+    const st = await v.waitFor((m) => m.op === 'state' && m.state.phase === 'lobby');
+    assert.deepEqual(st.state.order, ['anna', 'ben'], 'Spieler bleiben registriert');
+    assert.equal(Object.keys(st.state.teams).length, 0, 'Teams geleert');
+    a.close(); b.close(); v.close();
+  } finally {
+    await srv.stop();
+  }
+});
+
 test('Gekoppelter Tod wird an den Partner verteilt', async () => {
   const { srv, url } = await startServer();
   try {
