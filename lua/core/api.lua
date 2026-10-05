@@ -25,7 +25,8 @@ end
 --- Abgeleitete Ansichten für Run-Übersicht und Overlay (keine Regel-Logik im Browser).
 function api.derive(state_json)
   local state = json.decode(state_json)
-  local out = json.object({ ranking = json.array(R.ranking(state)), players = json.object() })
+  local out = json.object({ ranking = json.array(R.ranking(state)), players = json.object(),
+    summary = json.array(X.summary(state)) })
   for _, pid in ipairs(state.order) do
     local catchup, offline = R.catchup_active(state, pid)
     local gym_ok, gym_reason = R.gym_allowed(state, pid)

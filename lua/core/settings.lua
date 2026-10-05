@@ -26,18 +26,24 @@ function S.defaults()
   })
 end
 
+-- Vorlagen legen alle Regelschalter vollständig fest, damit ein Wechsel zwischen Vorlagen nichts von der
+-- vorigen übrig lässt (z. B. "Items im Kampf: verboten" aus Hardcore). Nicht berührt werden Ziel, Wertung,
+-- Randomizer, Discord und Automatiken.
 S.presets = {
   locker = {
     level_cap = false, rare_candies = true, grace = true, dupes_clause = true,
-    shiny_clause = true, follow_mode = false,
+    shiny_clause = true, follow_mode = false, gifts_count = true, death_log = true,
+    battle_items = { mode = "erlaubt", max = 1 },
   },
   klassisch = {
     level_cap = true, rare_candies = true, grace = true, dupes_clause = true,
-    shiny_clause = true, follow_mode = true,
+    shiny_clause = true, follow_mode = true, gifts_count = true, death_log = true,
+    battle_items = { mode = "erlaubt", max = 1 },
   },
   hardcore = {
     level_cap = true, rare_candies = false, grace = false, dupes_clause = false,
-    shiny_clause = true, follow_mode = true, battle_items = { mode = "verboten", max = 0 },
+    shiny_clause = true, follow_mode = true, gifts_count = true, death_log = true,
+    battle_items = { mode = "verboten", max = 0 },
   },
 }
 

@@ -247,9 +247,14 @@ Ohne die nötigen Profilangaben bleiben beide Funktionen aus. Das Overlay sagt d
 ## Run-Übersicht
 
 `web/index.html` ist eine eigenständige statische Seite. Sie verbindet sich per Server-Adresse und
-Lobby-Code als Zuschauer (nur lesen) und aktualisiert sich live. Sie zeigt Spieler und Online-Status,
-Orden, Gruppen, Teams, Friedhof und Todesprotokoll, Gebiets-Übersicht, aktive Regeln, Verlauf und
-frühere Versuche, bei Wettkampf auch die Rangliste. Monster erscheinen nur als Text (Name, Typ).
+Lobby-Code als Zuschauer (nur lesen) und aktualisiert sich live. Sie zeigt:
+- Spieler mit Online-Status, Gebiet, Orden-Fortschritt (●○), Kampf und Todeszählern;
+- das aktuelle Team jedes Spielers mit Gruppe;
+- alle Gruppen, Gebiets-Übersicht, Friedhof und Todesprotokoll (aktueller Versuch und alle Versuche);
+- aktive Regeln, Verlauf, frühere Versuche, Bilanz und bei Wettkampf die Rangliste;
+- nach dem Run-Ende die Statistik.
+
+Monster erscheinen nur als Text (Name, Typ).
 
 - Vom Server ausgeliefert: `http(s)://<server>/`
 - Über GitHub Pages: Workflow `.github/workflows/pages.yml` (einmalig unter *Settings > Pages > Source*
@@ -325,6 +330,10 @@ noch keine Bälle, Aufhol-Sperre.
 | Schillernd-Klausel (`shiny_clause`) | an | an | an |
 | Folgemodus (`follow_mode`) | aus | an | an |
 | Items im Kampf (`battle_items.mode`) | erlaubt | erlaubt | verboten |
+| Geschenke zählen, Todesprotokoll | an | an | an |
+
+Eine Vorlage setzt alle diese Schalter, ein Wechsel zwischen Vorlagen lässt also nichts übrig. Ziel, Wertung,
+Randomizer, Discord und Automatiken bleiben unberührt.
 
 Weitere Schalter: `gifts_count` (Geschenke zählen als Gebietsfang), `death_log`, `skip_prologue`,
 `skip_nickname`, `randomizer.mode` (`aus` | `alle` | `edition`), `goal` (`spielende` oder
@@ -351,6 +360,11 @@ Eigene Vorlagen liegen auf dem Server (im Solo-Modus in `local/vorlagen.json`).
    `DISCORD_WEBHOOK_URL`, z. B. bei Render).
 3. Meldungsarten einzeln abschaltbar: `discord.events.death`, `group`, `badge`, `run_start`, `run_end`
    (Server) und zusätzlich pro Lobby in den Einstellungen (`discord.*`).
+
+Inhalte: Tod mit Gebiet, Level, Gegner und mitgerissenen Monstern; neue Gruppe mit allen Mitgliedern; neuer Orden;
+Run-Start mit Vorlage; Run-Ende mit Statistik (Dauer, Orden, Tode, Gruppen, Gebiete, bei Wettkampf die Plätze).
+Bei Wettkampf nennen die Meldungen Spieler und Team, Ausscheiden und Ziel-Erreichen kommen als eigene Meldung.
+Drosselt Discord (zu viele Meldungen), wiederholt der Server einmal nach der genannten Wartezeit.
 
 Ohne Webhook-Adresse passiert nichts.
 

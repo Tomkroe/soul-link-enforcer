@@ -146,6 +146,15 @@ Vorbereitung: `backups.save_path` setzen, `write_enabled = true`, nur `party` au
 - [ ] Zu Beginn einer wilden Begegnung erscheint der passende Hinweis: zählt / Duplikat / Schillernd / keine Bälle /
       Aufhol-Sperre. Bei einer Begegnung in einem schon genutzten Gebiet erscheint kein Hinweis.
 
+## 7. Rund um den Run
+
+- [ ] Vorlage in `lobby_settings` wechseln (hardcore, dann locker) → in der Übersicht „Aktive Regeln“ stimmen alle Schalter.
+- [ ] Eigene Vorlage mit `save_as` speichern, bei neuem Versuch mit `template` laden.
+- [ ] Discord (Testkanal): Run-Start, neue Gruppe, Orden, Tod (mit Gebiet, Level, Gegner, mitgerissen) und
+      Run-Ende mit Statistik kommen an; eine abgeschaltete Art kommt nicht.
+- [ ] Run verlieren → Overlay „RUN BEENDET: VERLOREN“ mit Statistik, Übersicht zeigt die Statistik-Karte.
+- [ ] Übersicht über GitHub Pages (`?server=wss://…/ws&lobby=…`) zeigt live dieselben Daten.
+
 ## 5. Randomizer (erst nach Abschnitt 3)
 
 - [ ] `config.lua`: `rom_path` auf die eigene Platin-ROM setzen. `check.lua`: „ROM gelesen“ mit Game-Code CPUD

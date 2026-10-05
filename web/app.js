@@ -118,12 +118,36 @@ function renderHeader(state, derived) {
   return html;
 }
 
+function badgeBar(n, max) {
+  const total = Math.max(8, max || 8);
+  let out = '';
+  for (let i = 0; i < total; i++) out += i < n ? '●' : '○';
+  return `<span title="${n} Orden" aria-label="${n} von ${total} Orden">${out}</span>`;
+}
+
+function renderParties(state) {
+  // Aktuelles Team jedes Spielers (wie im Spiel gemeldet), mit Gruppe und Status
+  const rows = state.order.map((pid) => {
+    const p = state.players[pid];
+    const team = state.teams[p.team];
+    const mons = (p.party || []).map((uid) => {
+      const m = p.mons[uid];
+      if (!m) return '<li class="muted">unbekannt</li>';
+      const g = m.group && team ? team.groups[m.group] : null;
+      const tag = g ? ` <span class="muted">(Gr. ${esc(m.group.slice(1))})</span>` : (m.status === 'frei' ? ' <span class="muted">(frei)</span>' : '');
+      return `<li class="${m.status === 'tot' ? 'dead' : ''}">${esc(monLabel(m))}${tag}</li>`;
+    }).join('');
+    return `<div class="stat"><b>${esc(p.name)}</b>${badgeBar(p.badges)}<ul class="feed">${mons || '<li class="muted">noch kein Team gemeldet</li>'}</ul></div>`;
+  }).join('');
+  return `<div class="stats">${rows}</div>`;
+}
+
 function renderPlayers(state, stats) {
   const rows = state.order.map((pid) => {
     const p = state.players[pid];
     const s = stats?.[pid] || {};
     return `<tr><td>${esc(p.name)}</td><td><span class="pill ${p.online ? 'pill-on' : 'pill-off'}">${p.online ? 'online' : 'offline'}</span></td>
-      <td>${esc(p.area?.name || '–')}</td><td>${p.badges}</td><td>${p.in_battle ? 'ja' : 'nein'}</td>
+      <td>${esc(p.area?.name || '–')}</td><td>${badgeBar(p.badges)}</td><td>${p.in_battle ? 'ja' : 'nein'}</td>
       <td>${s.deaths ?? 0}</td><td>${s.dragged ?? 0}</td><td>${s.attempts ?? 0}</td></tr>`;
   }).join('');
   return `<div class="scroll"><table><thead><tr><th>Spieler</th><th>Status</th><th>Gebiet</th><th>Orden</th><th>Kampf</th>
@@ -233,6 +257,11 @@ function render() {
   if (!last) return;
   const { state, derived, stats } = last;
   let html = card('Überblick', renderHeader(state, derived) + renderPlayers(state, stats), true);
+  const summary = derived.summary || [];
+  if (state.phase === 'finished' && summary.length) {
+    html += card(`Statistik – Run ${esc(state.result)}`, `<ul>${summary.map((l) => `<li>${esc(l)}</li>`).join('')}</ul>`, true);
+  }
+  if (state.phase !== 'lobby') html += card('Aktuelle Teams', renderParties(state), true);
   if (state.team_order.length > 1) html += card('Rangliste', renderRanking(state, derived), true);
   for (const tid of state.team_order) {
     const team = state.teams[tid];

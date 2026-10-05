@@ -3,6 +3,7 @@
 
 local R = require("core.rules")
 local M = require("core.model")
+local Export = require("core.export")
 
 local Overlay = {}
 
@@ -102,7 +103,12 @@ function Overlay.lines(ctx)
     return out
   end
   if state.phase == "finished" then
-    add("Run beendet: " .. state.result, state.result == "gewonnen" and "gruen" or "rot")
+    -- Endbildschirm mit Statistik
+    local color = state.result == "gewonnen" and "gruen" or "rot"
+    add("RUN BEENDET: " .. string.upper(state.result), color)
+    for i, line in ipairs(Export.summary(state)) do
+      if i > 1 then add(line, "weiss") end
+    end
   end
 
   local me = state.players[pid]

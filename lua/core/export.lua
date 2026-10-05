@@ -2,6 +2,7 @@
 
 local M = require("core.model")
 local U = require("core.util")
+local R = require("core.rules")
 
 local X = {}
 
@@ -70,6 +71,59 @@ function X.deathlog(state, stats, limit)
   end
   if #all == 0 then lines[#lines + 1] = "Noch keine Tode." end
   return table.concat(lines, "\n") .. "\n"
+end
+
+--- Dauer in Text ("2 h 14 min", "45 min", "30 s").
+function X.duration(ms)
+  local s = math.max(0, math.floor((ms or 0) / 1000))
+  if s < 60 then return U.num(s) .. " s" end
+  local m = math.floor(s / 60)
+  if m < 60 then return U.num(m) .. " min" end
+  return U.num(math.floor(m / 60)) .. " h " .. U.num(m % 60) .. " min"
+end
+
+--- Run-Statistik (Endbildschirm, Discord, Übersicht). Rückgabe: Liste von Zeilen.
+function X.summary(state)
+  local lines = {}
+  local head = "Versuch " .. U.num(state.attempt)
+  if state.phase == "finished" then
+    head = head .. " – " .. state.result
+  end
+  if state.started_at > 0 then
+    local stop = state.ended_at > 0 and state.ended_at or state.started_at
+    head = head .. " nach " .. X.duration(stop - state.started_at)
+  end
+  lines[#lines + 1] = head
+  if #state.team_order > 1 then
+    for _, row in ipairs(R.ranking(state)) do
+      lines[#lines + 1] = "Platz " .. U.num(row.rank) .. ": " .. row.name .. " (" .. row.status .. ")"
+    end
+  end
+  local badges, deaths, viol = {}, {}, 0
+  for _, pid in ipairs(state.order) do
+    local p = state.players[pid]
+    badges[#badges + 1] = p.name .. " " .. U.num(p.badges)
+    deaths[#deaths + 1] = p.name .. " " .. U.num(p.deaths) .. (p.dragged > 0 and (" (+" .. U.num(p.dragged) .. " mitgerissen)") or "")
+    viol = viol + (p.violations or 0)
+  end
+  lines[#lines + 1] = "Orden: " .. table.concat(badges, ", ")
+  lines[#lines + 1] = "Tode: " .. table.concat(deaths, ", ")
+  local groups, dead, areas, consumed = 0, 0, 0, 0
+  for _, tid in ipairs(state.team_order) do
+    local team = state.teams[tid]
+    groups = groups + #team.group_order
+    for _, gid in ipairs(team.group_order) do
+      if team.groups[gid].status == "tot" then dead = dead + 1 end
+    end
+    areas = areas + #team.area_order
+    for _, key in ipairs(team.area_order) do
+      if team.areas[key].consumed then consumed = consumed + 1 end
+    end
+  end
+  lines[#lines + 1] = "Gruppen: " .. U.num(groups) .. " (" .. U.num(groups - dead) .. " lebend, " .. U.num(dead) .. " tot)"
+  lines[#lines + 1] = "Gebiete: " .. U.num(areas) .. " betreten, " .. U.num(consumed) .. " verbraucht"
+  if viol > 0 then lines[#lines + 1] = "Regelverstöße: " .. U.num(viol) end
+  return lines
 end
 
 --- Todesprotokoll über alle Versuche (aus der dauerhaften Bilanz, neueste zuerst).

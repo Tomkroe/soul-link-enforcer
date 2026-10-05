@@ -82,8 +82,14 @@ nach stabil getesteter Stufe A bzw. B.
 Dazu der Hinweis zu Kampfbeginn, ob eine wilde Begegnung zählt. Die Bewertung steht dafür einmal in
 `core.rules.encounter_status` und wird von Engine und Overlay genutzt.
 
-**Phase 7:** fertig im Code. Vorlagen eingebaut, eigene speichern und laden (Server und Solo), Discord,
-Run-Übersicht mit Bilanz.
+**Phase 7:** fertig im Code. Im Einzelnen:
+- **Vorlagen:** vollständig nach Vorgabe; ein Wechsel lässt nichts übrig. Danach einzeln anpassbar, eigene Vorlagen
+  speichern und laden (Server und Solo).
+- **Discord:** alle Meldungsarten, Run-Ende mit Statistik, Wiederholung bei Drosselung, jede Art abschaltbar.
+- **Run-Übersicht:** aktuelle Teams pro Spieler, Orden-Fortschritt, Gruppen, Gebiete, Friedhof, beide
+  Todesprotokolle, Regeln, Verlauf, frühere Versuche, Bilanz, Statistik nach Run-Ende; live, nur Text.
+- **Endbildschirm im Overlay** (Regel 3.8): Statistik aus `core.export.summary`, dieselbe wie bei Discord und
+  in der Übersicht.
 
 **Phase 8:** fertig im Code. Teams aus `config.lua`, Rangliste, Ausscheiden, Platzierungen, dauerhafte Bilanz pro
 Spieler und Team-Konstellation, Hinweis bei ungleichen Teams.
@@ -94,6 +100,8 @@ Handicap-Ereignisse, Zeitleiste, Protokoll von Regelverstößen. Das Verstoß-Pr
 
 ## Verlauf
 
+- 05.10.2026 (8): Phase 7 abgeschlossen: vollständige Vorlagen, Run-Statistik (Endbildschirm, Discord,
+  Übersicht), Discord-Wiederholung bei 429, Übersicht mit aktuellen Teams und Orden-Fortschritt.
 - 05.10.2026 (7): Phase 6 abgeschlossen: dauerhaftes Todesprotokoll über alle Versuche (+ Export, Übersicht),
   Datum im Export, Begegnungs-Bewertung als Regel-Abfrage mit Hinweis zu Kampfbeginn.
 - 05.10.2026 (6): Box-Suche, tote Monster in der Kampfkopie auf 0 KP (battle_safe), Vorschläge per Taste V,

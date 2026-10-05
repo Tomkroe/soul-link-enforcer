@@ -222,3 +222,14 @@ Ob eine Begegnung als Gebietschance zählt (Schillernd, Schonfrist ohne Bälle, 
 genutzt/verbraucht), steht in `rules.encounter_status`. Die Engine nutzt sie für `encounter_failed`, das Overlay
 zu Kampfbeginn. Reihenfolge: Schillernd vor allem anderen; eine bereits genutzte oder verbrauchte Chance geht vor
 der Duplikat-Klausel, die wiederum vor der Aufhol-Sperre steht.
+
+## E24 – Vollständige Vorlagen, eine Statistik für alle Ausgaben (05.10.2026)
+
+Die Vorlagen setzen alle Regelschalter, auch die, die das Startscript nicht ausdrücklich nennt (Items im Kampf
+„erlaubt“ bei Locker/Klassisch, Schillernd-Klausel an bei Hardcore, Geschenke und Todesprotokoll an).
+Andernfalls bliebe nach einem Wechsel ein Rest der vorigen Vorlage stehen. Ziel, Wertung, Randomizer, Discord
+und Automatiken gehören nicht zu den Regelvorlagen.
+
+Die Run-Statistik (`core.export.summary`) wird einmal berechnet und von Endbildschirm, Discord-Meldung und
+Run-Übersicht genutzt. Bei nur einem Team gibt es genau eine Run-Ende-Meldung (mit Statistik). Bei mehreren
+Teams kommen zusätzlich Ausscheiden und Ziel-Erreichen je Team.

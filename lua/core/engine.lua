@@ -17,6 +17,7 @@ local U = require("core.util")
 local M = require("core.model")
 local R = require("core.rules")
 local Settings = require("core.settings")
+local Export = require("core.export")
 
 local E = {}
 
@@ -146,7 +147,8 @@ function Ctx:check_team_end(team)
     local text = "Alle Gruppen tot – " .. (#state.team_order > 1 and (team.name .. " scheidet aus.") or "der Run ist verloren.")
     self:notify(text, "alarm")
     self:log("team_lost", text, { team = team.id })
-    self:discord("run_end", text)
+    -- Bei nur einem Team meldet check_run_end das Ende (mit Statistik)
+    if #state.team_order > 1 then self:discord("run_end", text) end
   elseif R.goal_reached(state, team) then
     state.counters.finish = state.counters.finish + 1
     team.status = "fertig"
@@ -155,7 +157,7 @@ function Ctx:check_team_end(team)
     local text = team.name .. " hat das Ziel erreicht (Platz " .. U.num(team.place) .. ")."
     self:notify(text, "info")
     self:log("team_goal", text, { team = team.id })
-    self:discord("run_end", text)
+    if #state.team_order > 1 then self:discord("run_end", text) end
   end
   self:check_run_end()
 end
@@ -178,6 +180,7 @@ function Ctx:check_run_end()
   local text = "Run beendet: " .. state.result .. "."
   self:log("run_end", text)
   self:notify(text, any_won and "info" or "alarm")
+  self:discord("run_end", text .. "\n" .. table.concat(Export.summary(state), "\n"))
   self:archive_attempt()
 end
 

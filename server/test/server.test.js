@@ -281,3 +281,19 @@ test('Todesprotokoll als Textdatei für Stream-Overlays', async () => {
     await srv.stop();
   }
 });
+
+test('Discord: bei Drosselung (429) einmal nach Wartezeit wiederholen', async () => {
+  const { Discord } = require('../src/discord');
+  let calls = 0;
+  const d = new Discord({ webhook_url: 'https://discord.invalid/x', events: { death: true } }, async () => {
+    calls += 1;
+    if (calls === 1) return { ok: false, status: 429, json: async () => ({ retry_after: 0.5 }) };
+    return { ok: true, status: 204 };
+  });
+  d.waitScale = 0.01;
+  await d.post('death', 'Test');
+  assert.equal(calls, 2);
+  d.events.death = false;
+  await d.post('death', 'aus');
+  assert.equal(calls, 2, 'abgeschaltete Meldungsart wird nicht gesendet');
+});

@@ -114,3 +114,23 @@ T.test("Zustand ist reines JSON und übersteht die Rundreise", function()
   local eff = E.apply(back, { type = "faint", player = "anna", uid = "anna-a", t = 99999 })
   T.has(eff, { type = "kill", player = "ben", uid = "ben-a" })
 end)
+
+T.test("Vorlagen sind vollständig: Wechsel Hardcore -> Locker setzt alles zurück", function()
+  local s = H.run(1, { start = false })
+  s:ok("set_settings", "anna", { preset = "hardcore" })
+  T.eq(s.state.settings.battle_items.mode, "verboten")
+  s:ok("set_settings", "anna", { preset = "locker" })
+  T.eq(s.state.settings.battle_items.mode, "erlaubt")
+  T.eq(s.state.settings.grace, true)
+  T.eq(s.state.settings.dupes_clause, true)
+  T.eq(s.state.settings.level_cap, false)
+  T.eq(s.state.settings.follow_mode, false)
+  T.eq(s.state.settings.rare_candies, true)
+  -- Vorgaben aus dem Startscript für alle drei Vorlagen
+  local S = require("core.settings")
+  local function p(name) return S.apply_preset(S.defaults(), name) end
+  local k, h = p("klassisch"), p("hardcore")
+  T.eq({ k.level_cap, k.rare_candies, k.grace, k.dupes_clause, k.shiny_clause, k.follow_mode }, { true, true, true, true, true, true })
+  T.eq({ h.level_cap, h.rare_candies, h.grace, h.dupes_clause, h.follow_mode, h.battle_items.mode },
+    { true, false, false, false, true, "verboten" })
+end)

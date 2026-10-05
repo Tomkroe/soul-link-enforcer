@@ -64,3 +64,41 @@ T.test("Todesprotokoll abgeschaltet: keine dauerhaften Einträge", function()
   T.no(T.find(eff, { type = "death" }))
   T.eq(#s:team("anna").graveyard, 1, "Friedhof bleibt (für die Regeln)")
 end)
+
+T.test("Run-Statistik: Endbildschirm und Discord-Meldung beim Run-Ende", function()
+  local s = H.run(2)
+  H.catch_all(s, H.AREA1, "a")
+  s:ok("status", "anna", { badges = 2 })
+  s:ok("encounter_failed", "ben", { area = H.AREA2 })
+  local eff = s:ok("faint", "anna", { uid = "anna-a" })
+  T.eq(s.state.phase, "finished")
+  local lines = X.summary(s.state)
+  T.ok(lines[1]:find("^Versuch 1 – verloren nach"), lines[1])
+  T.has({ { t = lines[2] } }, { t = "Orden: Anna 2, Ben 0" })
+  T.has({ { t = lines[3] } }, { t = "Tode: Anna 1, Ben 0 (+1 mitgerissen)" })
+  T.has({ { t = lines[4] } }, { t = "Gruppen: 1 (0 lebend, 1 tot)" })
+  T.has({ { t = lines[5] } }, { t = "Gebiete: 2 betreten, 1 verbraucht" })
+  local n = 0
+  for _, e in ipairs(eff) do
+    if e.type == "discord" and e.kind == "run_end" then
+      n = n + 1
+      T.ok(e.text:find("Run beendet: verloren"))
+      T.ok(e.text:find("Tode: Anna 1"))
+    end
+  end
+  T.eq(n, 1, "bei einem Team genau eine Run-Ende-Meldung")
+end)
+
+T.test("Run-Statistik Wettkampf: Plätze und Team-Meldungen", function()
+  local s = H.run(2, { teams = { { "anna" }, { "ben" } }, settings = { goal = { kind = "orden", value = 1 } } })
+  H.catch_all(s, H.AREA1, "a")
+  local e1 = s:ok("status", "ben", { badges = 1 })
+  T.has(e1, { type = "discord", kind = "run_end" })
+  local e2 = s:ok("faint", "anna", { uid = "anna-a" })
+  local n = 0
+  for _, e in ipairs(e2) do if e.type == "discord" and e.kind == "run_end" then n = n + 1 end end
+  T.eq(n, 2, "Ausscheiden + Run-Ende")
+  local lines = X.summary(s.state)
+  T.ok(lines[2]:find("^Platz 1: Team 2"), lines[2])
+  T.ok(lines[3]:find("^Platz 2: Team 1"), lines[3])
+end)

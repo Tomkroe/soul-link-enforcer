@@ -503,3 +503,19 @@ T.test("Hinweis zu Kampfbeginn: zählt die Begegnung? (einmal pro Kampf)", funct
   app:tick()
   T.ok(app.messages[#app.messages].text:find("Schillernd"))
 end)
+
+T.test("Endbildschirm mit Statistik im Overlay", function()
+  local app, emu, mem = make_app()
+  local H = require("core.helpers")
+  local s = H.run(1)
+  H.catch_all(s, H.AREA1, "a")
+  s:ok("faint", "anna", { uid = "anna-a" })
+  deliver(app, mem, { { op = "welcome", player = "anna", last_seq = 0 }, { op = "state", state = s.state } })
+  app:tick()
+  local all = {}
+  for _, l in ipairs(app:lines()) do all[#all + 1] = l.text end
+  local text = table.concat(all, "\n")
+  T.ok(text:find("RUN BEENDET: VERLOREN"), text)
+  T.ok(text:find("Tode: Anna 1"), text)
+  T.ok(text:find("neuer Versuch"), text)
+end)
