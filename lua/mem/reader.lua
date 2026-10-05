@@ -156,13 +156,26 @@ function Reader:read_box()
   local e = self:entry("boxes")
   local base = self:resolve(e)
   if not e or not base then return nil end
+  -- Zwischenspeicher: pro Platz nur PID und Prüfsumme lesen (2 Zugriffe); entschlüsselt wird nur, was sich
+  -- geändert hat. Sonst wären es bei 18 Boxen à 30 Plätzen über 70.000 Speicherzugriffe pro Durchgang.
+  self.box_cache = self.box_cache or {}
   local out = {}
   local total = (e.count or 18) * (e.slots or 30)
   for i = 0, total - 1 do
-    local raw = self.emu.read_bytes(base + i * P.BOX_SIZE, P.BOX_SIZE)
-    if not (raw[1] == 0 and raw[2] == 0 and raw[3] == 0 and raw[4] == 0 and raw[7] == 0 and raw[8] == 0) then
-      local m = P.parse(P.decrypt(raw), self.gen)
-      if m.valid and m.species ~= 0 then out[#out + 1] = self:enrich(m) end
+    local addr = base + i * P.BOX_SIZE
+    local pid, chk = self.emu.read32(addr), self.emu.read16(addr + 6)
+    if pid ~= 0 or chk ~= 0 then
+      local key = string.format("%.0f:%.0f", pid, chk)
+      local cached = self.box_cache[i]
+      if not cached or cached.key ~= key then
+        local m = P.parse(P.decrypt(self.emu.read_bytes(addr, P.BOX_SIZE)), self.gen)
+        cached = { key = key, mon = (m.valid and m.species ~= 0) and self:enrich(m) or false }
+        self.box_cache[i] = cached
+        self.box_decrypts = (self.box_decrypts or 0) + 1
+      end
+      if cached.mon then out[#out + 1] = cached.mon end
+    else
+      self.box_cache[i] = nil
     end
   end
   return out

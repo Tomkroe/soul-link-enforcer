@@ -182,3 +182,32 @@ T.test("Spielende-Merkmal aus dem Profil", function()
   emu.write8(party - 0x100, 1)
   T.eq(r:snapshot(0).completed, true)
 end)
+
+T.test("Boxen: gefunden, mit Zwischenspeicher (nur Geändertes wird entschlüsselt)", function()
+  local emu = Emu.fake()
+  local _, party = us_layout(emu)
+  local profile = copy(Profiles.load("CPUD"))
+  profile.addresses.boxes = { rel = "party", offset = 0x2000, count = 2, slots = 3, tested = false }
+  local function put_box(slot, pid, species)
+    local plain = P.decrypt(F.party_mon(pid, species, 5, 10, 10))
+    local box = {}
+    for i = 1, 136 do box[i] = plain[i] end
+    local raw = P.encrypt(box)
+    for i, v in ipairs(raw) do emu.write8(party + 0x2000 + slot * 136 + i - 1, v) end
+  end
+  put_box(0, 1001, 25)
+  put_box(4, 1002, 1)
+  local r = Reader.new({ profile = profile, emu = emu })
+  local snap = r:snapshot(0, true)
+  T.eq(#snap.box, 2)
+  T.eq(r.box_decrypts, 2)
+  r:snapshot(0, true)
+  T.eq(r.box_decrypts, 2, "unverändert: nichts neu entschlüsselt")
+  put_box(1, 1003, 4)
+  snap = r:snapshot(0, true)
+  T.eq(#snap.box, 3)
+  T.eq(r.box_decrypts, 3)
+  -- Platz geleert
+  for i = 0, 135 do emu.write8(party + 0x2000 + i, 0) end
+  T.eq(#r:snapshot(0, true).box, 2)
+end)
