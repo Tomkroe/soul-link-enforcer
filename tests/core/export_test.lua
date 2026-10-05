@@ -1,0 +1,26 @@
+local T = require("lib.t")
+local H = require("core.helpers")
+local X = require("core.export")
+
+T.test("Todesprotokoll: Kopf mit Zählern, neueste Tode zuerst, Ursache", function()
+  local s = H.run(2)
+  H.catch_all(s, H.AREA1, "a")
+  H.catch_all(s, H.AREA2, "b")
+  s:ok("faint", "anna", { uid = "anna-a", level = 12, opponent = "Rivale" })
+  local text = X.deathlog(s.state, { anna = { deaths = 4, dragged = 1, attempts = 3 } })
+  local lines = {}
+  for l in text:gmatch("[^\n]+") do lines[#lines + 1] = l end
+  T.ok(lines[1]:find("Versuch 1"))
+  T.ok(lines[2]:find("Anna: 4 Tode, 1 mitgerissen, 3 Versuche"), lines[2])
+  T.ok(lines[2]:find("Ben: 0 Tode"), lines[2])
+  T.eq(#lines, 4)
+  T.ok(text:find("Arta %(Anna%) Lv%.12 in Route 201 gegen Rivale – gefallen"), text)
+  T.ok(text:find("%(Ben%) Lv%.5 in Route 201 gegen Rivale – mitgerissen"), text)
+end)
+
+T.test("Todesprotokoll: leer und abgeschaltet", function()
+  local s = H.run(1)
+  T.ok(X.deathlog(s.state):find("Noch keine Tode"))
+  local s2 = H.run(1, { settings = { death_log = false } })
+  T.ok(X.deathlog(s2.state):find("abgeschaltet"))
+end)

@@ -256,3 +256,26 @@ test('Run-Übersicht: statische Dateien werden ausgeliefert', async () => {
     await srv.stop();
   }
 });
+
+test('Todesprotokoll als Textdatei für Stream-Overlays', async () => {
+  const { srv, port, url } = await startServer();
+  try {
+    const a = await connect(url, { role: 'player', lobby: 'STREAM', name: 'Anna' });
+    await a.event({ type: 'start_run' });
+    await a.event({ type: 'status', has_balls: true });
+    await a.event({ type: 'catch', uid: 'a1', species_name: 'Plinfa', area: { key: '1', name: 'Zweiblattdorf' } });
+    await a.event({ type: 'catch', uid: 'a2', area: { key: '2', name: 'Route 201' } });
+    await a.event({ type: 'faint', uid: 'a1', level: 7, opponent: 'Rivale' });
+    const res = await fetch(`http://127.0.0.1:${port}/api/stream/todesprotokoll.txt`);
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get('access-control-allow-origin'), '*');
+    const text = await res.text();
+    assert.match(text, /Anna: 1 Tode/);
+    assert.match(text, /Plinfa \(Anna\) Lv\.7 in Zweiblattdorf gegen Rivale – gefallen/);
+    const missing = await fetch(`http://127.0.0.1:${port}/api/NIX123/todesprotokoll.txt`);
+    assert.equal(missing.status, 404);
+    a.close();
+  } finally {
+    await srv.stop();
+  }
+});

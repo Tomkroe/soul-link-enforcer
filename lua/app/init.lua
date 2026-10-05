@@ -18,6 +18,7 @@ local Inputs = require("app.inputs")
 local Automation = require("app.automation")
 local LocalHub = require("net.local_hub")
 local Rando = require("rando")
+local Export = require("core.export")
 
 local App = {}
 App.__index = App
@@ -244,6 +245,17 @@ function App:toggle_recording()
   end
 end
 
+--- Todesprotokoll lokal als Textdatei (für ein Stream-Overlay), nur bei Änderung.
+function App:export_deathlog()
+  local state = self.client.state
+  if not state or state.phase == "lobby" then return end
+  local ok, text = pcall(Export.deathlog, state, self.client.stats)
+  if ok and text ~= self.last_export then
+    self.last_export = text
+    self.fs.write_atomic(self.local_dir .. "/todesprotokoll.txt", text)
+  end
+end
+
 --- Älteste offene Abstimmung, bei der man selbst noch nicht zugestimmt hat.
 function App:open_proposal()
   local state, pid = self.client.state, self:pid()
@@ -316,6 +328,8 @@ function App:tick()
       self.reader:set_hp(uid, 0, in_battle)
     end
   end
+
+  self:export_deathlog()
 
   local name = self.backup:tick(self.now(), snap and snap.badges)
   if name then self:note("Sicherung angelegt: " .. name) end

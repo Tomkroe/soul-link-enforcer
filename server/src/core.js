@@ -15,6 +15,9 @@ function createCore() {
     derive(state) {
       return JSON.parse(mod.call('derive', JSON.stringify(state)));
     },
+    deathlog(state, stats) {
+      return mod.call('deathlog', JSON.stringify(state), JSON.stringify(stats || {}));
+    },
     check(state) {
       return JSON.parse(mod.call('check', JSON.stringify(state)));
     },

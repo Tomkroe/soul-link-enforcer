@@ -5,6 +5,7 @@ local json = require("lib.json")
 local E = require("core.engine")
 local R = require("core.rules")
 local M = require("core.model")
+local X = require("core.export")
 
 local api = {}
 
@@ -38,6 +39,11 @@ function api.derive(state_json)
     })
   end
   return json.encode(out)
+end
+
+--- Todesprotokoll als Text (für Stream-Overlays).
+function api.deathlog(state_json, stats_json)
+  return X.deathlog(json.decode(state_json), json.decode(stats_json or "{}"))
 end
 
 --- Prüft die Gültigkeit eines Zustands (z. B. nach dem Laden). Rückgabe: {"ok":true} oder Fehler.
