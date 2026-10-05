@@ -71,6 +71,11 @@ function api.violations(view_json)
   return X.violations(json.decode(view_json))
 end
 
+--- Zeitleiste als SVG.
+function api.timeline_svg(state_json, now)
+  return X.timeline_svg(json.decode(state_json), tonumber(now))
+end
+
 --- Prüft die Gültigkeit eines Zustands (z. B. nach dem Laden). Rückgabe: {"ok":true} oder Fehler.
 function api.check(state_json)
   local state = json.decode(state_json)

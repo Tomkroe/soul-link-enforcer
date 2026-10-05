@@ -81,6 +81,7 @@ function X.duration(ms)
   if s < 60 then return U.num(s) .. " s" end
   local m = math.floor(s / 60)
   if m < 60 then return U.num(m) .. " min" end
+  if m % 60 == 0 then return U.num(math.floor(m / 60)) .. " h" end
   return U.num(math.floor(m / 60)) .. " h " .. U.num(m % 60) .. " min"
 end
 
@@ -142,6 +143,101 @@ function X.deathlog_all(ledger_view, limit)
   end
   if #log == 0 then lines[#lines + 1] = "Noch keine Tode." end
   return table.concat(lines, "\n") .. "\n"
+end
+
+-- Zeitleiste als SVG ---------------------------------------------------------------
+
+local function xml(s)
+  return (tostring(s):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"):gsub('"', "&quot;"))
+end
+
+local TL_STYLE = {
+  fang = { color = "#2e9d5b", name = "Fang" }, tot = { color = "#d64541", name = "Tod" },
+  mitgerissen = { color = "#e67e22", name = "mitgerissen" }, orden = { color = "#d4a017", name = "Orden" },
+  verbraucht = { color = "#8a94a6", name = "Gebiet verbraucht" }, verstoss = { color = "#8e44ad", name = "Regelverstoß" },
+}
+X.TL_STYLE = TL_STYLE
+
+--- Zeitleiste des Versuchs als SVG-Bild. now: Endzeit, falls der Run noch läuft (ms).
+function X.timeline_svg(state, now)
+  local tl = state.timeline or {}
+  local start = state.started_at > 0 and state.started_at or ((tl[1] and tl[1].t) or 0)
+  local stop = state.ended_at > 0 and state.ended_at or (now or start)
+  for _, e in ipairs(tl) do if e.t > stop then stop = e.t end end
+  if stop <= start then stop = start + 60000 end
+  local W, left, right, lane, top = 1000, 130, 20, 54, 46
+  local players = state.order
+  local H = top + #players * lane + 56
+  local span = stop - start
+  local function x(t) return left + (t - start) / span * (W - left - right) end
+  local out = {}
+  local function add(s) out[#out + 1] = s end
+  add(string.format('<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="0 0 %d %d" font-family="sans-serif" font-size="12">', W, H, W, H))
+  add('<rect width="100%" height="100%" fill="#ffffff"/>')
+  add(string.format('<text x="10" y="22" font-size="16" font-weight="bold">%s</text>',
+    xml("Soul Link – Zeitleiste Versuch " .. U.num(state.attempt) .. (state.phase == "finished" and (" (" .. state.result .. ")") or ""))))
+  -- Zeitachse: Markierungen in sinnvollen Abständen
+  local steps = { 60000, 300000, 600000, 900000, 1800000, 3600000, 7200000 }
+  local step = steps[#steps]
+  for _, st in ipairs(steps) do if span / st <= 12 then step = st break end end
+  local axis_y = top + #players * lane + 8
+  local tick = 0
+  while tick <= span do
+    local tx = x(start + tick)
+    add(string.format('<line x1="%.1f" y1="%d" x2="%.1f" y2="%d" stroke="#e3e6eb"/>', tx, top - 6, tx, axis_y))
+    add(string.format('<text x="%.1f" y="%d" text-anchor="middle" fill="#677085">%s</text>', tx, axis_y + 14, X.duration(tick)))
+    tick = tick + step
+  end
+  for i, pid in ipairs(players) do
+    local y = top + (i - 1) * lane + lane / 2
+    add(string.format('<text x="10" y="%.1f" font-weight="bold">%s</text>', y + 4, xml(M.player_name(state, pid))))
+    add(string.format('<line x1="%d" y1="%.1f" x2="%d" y2="%.1f" stroke="#c9ced8" stroke-width="2"/>', left, y, W - right, y))
+    -- Offline-Zeiten als graue Balken
+    local off
+    for _, e in ipairs(tl) do
+      if e.p == pid and e.k == "offline" then off = e.t end
+      if e.p == pid and e.k == "online" and off then
+        add(string.format('<rect x="%.1f" y="%.1f" width="%.1f" height="14" fill="#c9ced8" opacity="0.6"><title>offline</title></rect>',
+          x(off), y - 7, math.max(1, x(e.t) - x(off))))
+        off = nil
+      end
+    end
+    if off then
+      add(string.format('<rect x="%.1f" y="%.1f" width="%.1f" height="14" fill="#c9ced8" opacity="0.6"><title>offline</title></rect>',
+        x(off), y - 7, math.max(1, x(stop) - x(off))))
+    end
+    for _, e in ipairs(tl) do
+      local st = TL_STYLE[e.k]
+      if e.p == pid and st then
+        local ex = x(e.t)
+        local title = "<title>" .. xml(st.name .. ": " .. e.l .. " – " .. X.duration(e.t - start)) .. "</title>"
+        if e.k == "fang" then
+          add(string.format('<circle cx="%.1f" cy="%.1f" r="5" fill="%s">%s</circle>', ex, y, st.color, title))
+        elseif e.k == "tot" or e.k == "mitgerissen" then
+          add(string.format('<g stroke="%s" stroke-width="3">%s<line x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f"/><line x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f"/></g>',
+            st.color, title, ex - 5, y - 5, ex + 5, y + 5, ex - 5, y + 5, ex + 5, y - 5))
+        elseif e.k == "orden" then
+          add(string.format('<polygon points="%.1f,%.1f %.1f,%.1f %.1f,%.1f %.1f,%.1f" fill="%s">%s</polygon>',
+            ex, y - 9, ex + 7, y, ex, y + 9, ex - 7, y, st.color, title))
+          add(string.format('<text x="%.1f" y="%.1f" text-anchor="middle" font-size="10" fill="#8a6d00">%s</text>', ex, y - 12, xml(e.l:gsub("Orden ", ""))))
+        elseif e.k == "verbraucht" then
+          add(string.format('<rect x="%.1f" y="%.1f" width="9" height="9" fill="%s">%s</rect>', ex - 4.5, y - 4.5, st.color, title))
+        elseif e.k == "verstoss" then
+          add(string.format('<polygon points="%.1f,%.1f %.1f,%.1f %.1f,%.1f" fill="%s">%s</polygon>', ex, y - 7, ex + 7, y + 6, ex - 7, y + 6, st.color, title))
+        end
+      end
+    end
+  end
+  -- Legende
+  local lx, ly = left, H - 14
+  for _, k in ipairs({ "fang", "tot", "mitgerissen", "orden", "verbraucht", "verstoss" }) do
+    add(string.format('<rect x="%d" y="%d" width="10" height="10" fill="%s"/><text x="%d" y="%d">%s</text>',
+      lx, ly - 9, TL_STYLE[k].color, lx + 14, ly, xml(TL_STYLE[k].name)))
+    lx = lx + 30 + #TL_STYLE[k].name * 7
+  end
+  add(string.format('<rect x="%d" y="%d" width="10" height="10" fill="#c9ced8"/><text x="%d" y="%d">offline</text>', lx, ly - 9, lx + 14, ly))
+  add("</svg>")
+  return table.concat(out, "\n") .. "\n"
 end
 
 local VIOLATION_KINDS = {

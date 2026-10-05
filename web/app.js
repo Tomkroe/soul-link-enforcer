@@ -25,6 +25,13 @@ function monLabel(m) {
   const types = Array.isArray(m.types) && m.types.length ? ` · ${m.types.join('/')}` : '';
   return `${base}${m.level ? ` Lv.${m.level}` : ''}${types}`;
 }
+/** http(s)-Adresse des Servers aus der WebSocket-Adresse (für Bilder und Textdateien). */
+function httpBase() {
+  const ws = document.querySelector('#server').value.trim();
+  if (!ws) return '';
+  return ws.replace(/^ws(s?):\/\//, 'http$1://').replace(/\/ws\/?$/, '');
+}
+
 function setConn(text, cls) {
   const el = $('#conn');
   el.textContent = text;
@@ -348,5 +355,11 @@ function render() {
   html += card('Erfolge', renderAchievements(state, last.ledger), true);
   if (state.phase !== 'lobby') html += card('Tipprunden', renderTips(state));
   if (state.phase !== 'lobby') html += card('Kampfstatistik', renderBattleStats(state));
+  if (state.phase !== 'lobby') {
+    const base = httpBase();
+    html += card('Zeitleiste', base
+      ? `<div class="scroll"><img alt="Zeitleiste des Runs" style="max-width:none" src="${esc(base)}/api/${esc(state.code)}/zeitleiste.svg?n=${(state.timeline || []).length}"></div>`
+      : '<p class="muted">Server-Adresse unbekannt.</p>', true);
+  }
   app.innerHTML = html;
 }

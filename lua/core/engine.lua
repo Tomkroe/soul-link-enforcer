@@ -53,6 +53,16 @@ function Ctx:log(kind, text, extra)
   while #log > M.LOG_LIMIT do table.remove(log, 1) end
 end
 
+--- Eintrag in die Zeitleiste des Versuchs (Idee "Zeitleiste des Runs als Bild").
+-- k: fang | tot | mitgerissen | orden | verbraucht | offline | online | verstoss | start | ende
+function Ctx:timeline(pid, kind, label)
+  local state = self.state
+  state.timeline = state.timeline or U.list()
+  local tl = state.timeline
+  tl[#tl + 1] = U.map({ t = self.t, p = pid or "", k = kind, l = label or "" })
+  while #tl > 2000 do table.remove(tl, 1) end
+end
+
 function Ctx:discord(kind, text)
   if self.state.settings.discord[kind] then
     self:emit({ type = "discord", kind = kind, text = text })
@@ -74,6 +84,7 @@ function Ctx:violation(pid, kind, text, level)
     attempt = state.attempt, lobby = state.code,
   }) })
   self:discord("violation", text)
+  self:timeline(pid, "verstoss", text)
 end
 
 function Ctx:fail(text)
@@ -128,6 +139,7 @@ function Ctx:kill_mon(pid, uid, cause, info)
   end
 
   self:emit({ type = "kill", player = pid, uid = uid, label = M.mon_label(mon), cause = cause })
+  self:timeline(pid, cause == "mitgerissen" and "mitgerissen" or "tot", M.mon_label(mon))
   if not p.online then
     p.absence[#p.absence + 1] = entry
   end
@@ -197,6 +209,7 @@ function Ctx:check_run_end()
   state.result = any_won and "gewonnen" or "verloren"
   local text = "Run beendet: " .. state.result .. "."
   self:log("run_end", text)
+  self:timeline("", "ende", state.result)
   self:notify(text, any_won and "info" or "alarm")
   self:discord("run_end", text .. "\n" .. table.concat(Export.summary(state), "\n"))
   self:archive_attempt()
@@ -340,6 +353,7 @@ function handlers.start_run(ctx, ev)
   state.attempt = state.attempt + 1
   state.phase = "running"
   state.tips = U.map()
+  state.timeline = U.list()
   -- Randomizer ohne Seed: festen Seed für diesen Versuch vergeben (gleich für alle, steht im Zustand)
   local rs = state.settings.randomizer
   if rs.mode ~= "aus" and rs.seed == "" then
@@ -406,6 +420,16 @@ function handlers.online(ctx, ev)
   p.online = true
   p.last_seen = ctx.t
   if was then return end
+  -- "online" nur als Ende einer Offline-Zeit in die Zeitleiste
+  if state.phase == "running" then
+    local tl = state.timeline or {}
+    for i = #tl, 1, -1 do
+      if tl[i].p == ev.player and (tl[i].k == "offline" or tl[i].k == "online") then
+        if tl[i].k == "offline" then ctx:timeline(ev.player, "online", "") end
+        break
+      end
+    end
+  end
   if state.phase == "running" and p.team ~= "" then
     local others = M.teammates(state, ev.player)
     if #others > 0 then ctx:notify(p.name .. " ist wieder verbunden.", "info", others) end
@@ -425,6 +449,7 @@ function handlers.offline(ctx, ev)
   if not p.online then return end
   p.online = false
   p.last_seen = ctx.t
+  if state.phase == "running" then ctx:timeline(ev.player, "offline", "") end
   if state.phase == "running" and p.team ~= "" then
     local others = M.teammates(state, ev.player)
     if #others > 0 then
@@ -505,6 +530,7 @@ function handlers.status(ctx, ev)
         ctx:violation(ev.player, "orden_aufhol",
           "Regelverstoß: " .. p.name .. " hat im Aufhol-Modus einen Orden geholt. " .. reason, "alarm")
       end
+      ctx:timeline(ev.player, "orden", "Orden " .. U.num(ev.badges))
       ctx:resolve_tips(ev.player, "orden")
       ctx:end_handicaps_on_badge(team, ev.player)
       ctx:check_handicaps()
@@ -627,6 +653,7 @@ function handlers.catch(ctx, ev)
   end
   ctx:log("catch", p.name .. " hat " .. label .. " in " .. ar.name .. " gefangen.", { player = ev.player })
   ctx:emit({ type = "stat", player = ev.player, key = "catches", delta = 1 })
+  ctx:timeline(ev.player, "fang", label .. " (" .. ar.name .. ")")
   if complete then
     g.status = "komplett"
     -- Erfolg "Volles Haus": sechs komplette, lebende Gruppen gleichzeitig (einmal pro Versuch)
@@ -673,6 +700,7 @@ function handlers.encounter_failed(ctx, ev)
   ar.by[ev.player] = "verpasst"
   ar.consumed = true
   ar.consumed_by = ev.player
+  ctx:timeline(ev.player, "verbraucht", ar.name)
   local text = ar.name .. " ist verbraucht: " .. p.name .. " hat dort nichts gefangen."
   local victims = {}
   if ar.group ~= "" then

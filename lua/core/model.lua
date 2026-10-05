@@ -25,6 +25,7 @@ function M.new_state(code)
     proposals = U.map(),        -- offene Abstimmungen
     counters = U.map({ group = 0, proposal = 0, finish = 0, tip = 0 }),
     tips = U.map(),             -- Tipprunden vor Arenen [id] = Runde
+    timeline = U.list(),        -- Zeitleiste des Versuchs: { t, p, k, l } (Spieler, Art, Beschriftung)
     log = U.list(),
     history = U.list(),         -- frühere Versuche
     started_at = 0,

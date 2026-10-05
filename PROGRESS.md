@@ -103,12 +103,20 @@ Dazu der Hinweis zu Kampfbeginn, ob eine wilde Begegnung zählt. Die Bewertung s
 
 Offen: Profil-Merkmal `game_completed` für das Ziel „Spielende“.
 
-**Ideen für später** (nicht gebaut, laut Vorgabe): Erfolge, Kampfstatistik pro Monster, Tipprunde,
-Handicap-Ereignisse, Zeitleiste, Protokoll von Regelverstößen. Das Verstoß-Protokoll steht schon im Verlauf
-(`kind = "violation"`) und lässt sich später auswerten.
+**Ideen für später:** auf Wunsch alle gebaut, im Code fertig und getestet:
+- **Erfolge:** 17 Stück, in `core/achievements.lua`.
+- **Kampfstatistik pro Monster:** braucht die Profil-Adressen für aktives Monster und Gegner-Team.
+- **Tipprunde vor Arenen.**
+- **Handicap-Ereignisse im Wettkampf:** abschaltbar, Standard aus.
+- **Zeitleiste des Runs als SVG.**
+- **Protokoll von Regelverstößen:** dauerhaft, mit Export.
+
+Test im Emulator: TESTEN.md Abschnitt „Extras“.
 
 ## Verlauf
 
+- 05.10.2026 (11): Ideen für später gebaut: Regelverstöße-Protokoll, Erfolge, Tipprunden, Handicaps,
+  Kampfstatistik, Zeitleiste (SVG). Fix im JSON-Modul (Schlüssel in aus [] gelesenen Tabellen gingen verloren).
 - 05.10.2026 (10): Boxen mit Zwischenspeicher (Leistung in DeSmuME), `npm run tunnel` (Server + Tunnel in einem
   Befehl, Adresse für config.lua), `npm run restore` (Sicherung zurückspielen), Windows-Startdateien,
   Lua-5.1-Verträglichkeit geprüft.

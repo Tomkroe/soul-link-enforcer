@@ -21,7 +21,7 @@ Spielkopie. Das Projekt enthält und lädt **keine ROMs, keine Spielgrafiken, ke
 5. [Script im Emulator starten](#script-im-emulator-starten)
    · [Solo-Modus](#solo-modus-allein-spielen) · [Komfort-Automatiken](#komfort-automatiken)
 6. [Run-Übersicht](#run-übersicht)
-7. [Wettkampf-Modus](#wettkampf-modus-phase-8) · [Regeln](#regeln)
+7. [Wettkampf-Modus](#wettkampf-modus-phase-8) · [Extras](#extras-erfolge-tipprunden-handicaps-kampfstatistik-zeitleiste-verstöße) · [Regeln](#regeln)
 8. [Schalter und Vorlagen](#schalter-und-vorlagen)
 9. [Discord einrichten](#discord-einrichten)
 10. [Sicherungen zurückspielen](#sicherungen-zurückspielen)
@@ -216,6 +216,9 @@ Tasten (änderbar in `config.lua`):
 | `V` | Vorschlag aus `proposal` in `config.lua` senden (Einstellungen ändern, Zähler zurücksetzen, aufgeben) |
 | `H` | Gruppen-Ansicht (alle Gruppen mit Mitgliedern und Status, * = im eigenen Team) |
 | `K` | Eingabe-Aufnahme starten/beenden (für „Prolog überspringen“) |
+| `E` | Erfolge |
+| `T` | Tipprunde für den eigenen nächsten Orden öffnen |
+| `7` / `8` / `9` | Tipp: ohne Tod / 1 Tod / 2+ Tode oder ausgeschieden |
 
 Lobby und Run-Start: Wer sich zuerst mit einem Lobby-Code verbindet, legt die Lobby an. Bis zu 4 Spieler
 treten mit demselben Code bei. Sind alle da, drückt einer `N`. Seine `lobby_settings` gelten dann für
@@ -293,6 +296,28 @@ lobby_settings = {
 
 Ziel „Spielende“ braucht das Profil-Merkmal `game_completed` (für Platin noch nicht ermittelt); bis dahin als
 Ziel eine Ordenzahl wählen.
+
+## Extras: Erfolge, Tipprunden, Handicaps, Kampfstatistik, Zeitleiste, Verstöße
+
+- **Erfolge pro Spieler** (17 Stück, z. B. „Erster Fang“, „Makellos“ – Orden ohne eigenen Tod, „Aufholjagd“,
+  „Volles Haus“, „Hattrick“, „Tippkönig“, „Kämpfer“): dauerhaft, mit Meldung im Overlay und auf Discord.
+  Overlay-Ansicht mit Taste `E`, in der Run-Übersicht als Karte.
+- **Tipprunde vor Arenen:** Vor dem nächsten Arenakampf öffnet ein Spieler mit `T` eine Runde für sich. Alle
+  tippen mit `7` (ohne Tod), `8` (1 Tod) oder `9` (2+ Tode oder ausgeschieden). Tipps schließen, sobald der
+  Spieler kämpft oder etwas verliert. Aufgelöst wird beim nächsten Orden. Richtige Tipps bringen Punkte in der Bilanz.
+- **Handicap-Ereignisse im Wettkampf** (Schalter `handicaps = { enabled = true, gap = 2 }`, Standard aus): Liegt ein
+  Team um mindestens `gap` Orden vor dem nächstbesten aktiven Team, bekommt es ein Handicap. Welches, bestimmt ein
+  fester Zufall, also bei allen gleich: Level-Cap −3 bis zum nächsten Orden, Items im Kampf verboten bis zum
+  nächsten Orden, oder die nächste freie Gebietschance verfällt.
+- **Kampfstatistik pro Monster:** Kämpfe, Einsätze, besiegte Gegner, gewonnene Level. Zu sehen in der Übersicht,
+  in der Gruppen-Ansicht (K.O.) und im Todesprotokoll. Braucht die Profil-Adressen für das aktive Monster und das
+  Gegner-Team.
+- **Zeitleiste des Runs als Bild (SVG):** eine Spur pro Spieler mit Fängen, Toden, Orden, verbrauchten Gebieten,
+  Offline-Zeiten und Verstößen; beim Überfahren mit der Maus Details.
+  Vom Server: `/api/<LOBBY>/zeitleiste.svg`, lokal: `local/zeitleiste.svg`, in der Run-Übersicht als Karte.
+- **Protokoll von Regelverstößen:** Orden im Aufhol-Modus, gesperrter Fang, Items im Kampf, alter Spielstand,
+  Monster über dem Level-Cap. Dauerhaft über alle Versuche, mit Summe pro Spieler und Art.
+  Vom Server: `/api/<LOBBY>/verstoesse.txt`, lokal: `local/verstoesse.txt`, in der Übersicht als Karte.
 
 ## Regeln
 

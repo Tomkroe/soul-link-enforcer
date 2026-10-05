@@ -32,6 +32,9 @@ function createCore() {
     violations(view) {
       return mod.call('violations', JSON.stringify(view));
     },
+    timelineSvg(state, now) {
+      return mod.call('timeline_svg', JSON.stringify(state), String(now));
+    },
     check(state) {
       return JSON.parse(mod.call('check', JSON.stringify(state)));
     },

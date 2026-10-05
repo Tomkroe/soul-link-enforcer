@@ -394,6 +394,15 @@ function App:export_deathlog()
     self.last_export = text
     self.fs.write_atomic(self.local_dir .. "/todesprotokoll.txt", text)
   end
+  -- Zeitleiste als Bild (nur bei neuen Ereignissen)
+  local n = #(state.timeline or {})
+  if n ~= self.last_timeline_n then
+    local okz, svg = pcall(Export.timeline_svg, state, self.client:server_now())
+    if okz then
+      self.last_timeline_n = n
+      self.fs.write_atomic(self.local_dir .. "/zeitleiste.svg", svg)
+    end
+  end
   if self.client.ledger then
     local ok3, vt = pcall(Export.violations, self.client.ledger)
     if ok3 and vt ~= self.last_export_viol then

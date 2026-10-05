@@ -173,6 +173,17 @@ Vorbereitung: `backups.save_path` setzen, `write_enabled = true`, nur `party` au
 - [ ] Bilanz in der Übersicht: Siege/Platzierungen pro Spieler und für die Konstellation.
 - [ ] Spielende-Merkmal (`game_completed`) finden, falls das Ziel „Spielende“ genutzt werden soll.
 
+## Extras (Ideen für später)
+
+- [ ] Erfolge: erster Fang → Meldung „Erfolg für …: Erster Fang“ (Overlay, Discord); Taste E zeigt die Liste.
+- [ ] Tipprunde: T öffnen, Mitspieler tippen mit 7/8/9, Arenakampf → nach dem Orden Ergebnis und Punkte.
+- [ ] Handicaps (Wettkampf, `handicaps.enabled = true`): Ein Team 2 Orden vorn → Meldung und rote Zeile
+      „HANDICAP: …“ im Overlay; endet wie angegeben.
+- [ ] Kampfstatistik: `battle_active_pid` (Basis +0x47620 laut US-Quelle) und Gegner-Team prüfen; nach Kämpfen
+      zeigt die Übersicht Kämpfe und K.O. je Monster.
+- [ ] Zeitleiste: `local/zeitleiste.svg` bzw. `/api/SOUL01/zeitleiste.svg` im Browser öffnen.
+- [ ] Verstöße: `/api/SOUL01/verstoesse.txt` listet Verstöße mit Versuch und Zeit.
+
 ## 5. Randomizer (erst nach Abschnitt 3)
 
 - [ ] `config.lua`: `rom_path` auf die eigene Platin-ROM setzen. `check.lua`: „ROM gelesen“ mit Game-Code CPUD

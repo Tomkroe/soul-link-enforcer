@@ -317,3 +317,23 @@ test('Erfolge: Freischalten wird gemeldet und an Discord geschickt', async () =>
     await srv.stop();
   }
 });
+
+test('Zeitleiste als SVG und Verstöße als Text vom Server', async () => {
+  const { srv, port, url } = await startServer();
+  try {
+    const a = await connect(url, { role: 'player', lobby: 'BILD', name: 'Anna' });
+    await a.event({ type: 'start_run' });
+    await a.event({ type: 'catch', uid: 'a1', area: { key: '1', name: 'R1' } });
+    const res = await fetch(`http://127.0.0.1:${port}/api/bild/zeitleiste.svg`);
+    assert.equal(res.status, 200);
+    assert.match(res.headers.get('content-type'), /image\/svg\+xml/);
+    const svg = await res.text();
+    assert.match(svg, /^<svg/);
+    assert.match(svg, /<circle/);
+    const v = await (await fetch(`http://127.0.0.1:${port}/api/BILD/verstoesse.txt`)).text();
+    assert.match(v, /Keine Regelverstöße/);
+    a.close();
+  } finally {
+    await srv.stop();
+  }
+});

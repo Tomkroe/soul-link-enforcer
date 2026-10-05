@@ -257,3 +257,27 @@ Doppelklicken rufen nur diese Befehle auf. `.gitattributes` sorgt für Windows-Z
 Pro Box-Platz werden nur PID und Prüfsumme gelesen; ganz gelesen und entschlüsselt wird ein Platz nur, wenn sich
 diese ändern. Ohne Zwischenspeicher wären es über 70.000 Speicherzugriffe und 540 Entschlüsselungen pro Durchgang,
 was in DeSmuME (reines Lua, keine Bit-Operatoren) spürbar ruckeln würde.
+
+## E28 – „Ideen für später“ auf Wunsch gebaut, Logik in core (05.10.2026)
+
+Alle sechs Ideen folgen demselben Muster: Regeln und Zähler in `lua/core`, dauerhafte Daten in der Bilanz
+(`core/ledger.lua`), Anzeige in Overlay, Run-Übersicht und Discord.
+- **Erfolge:** Schwellen auf dauerhafte Zähler (`core/achievements.lua`). Die Engine liefert dafür zusätzliche
+  Zähler (Fänge, Schillernde, Orden, makellose Orden, Aufholjagd, volles Team, K.O.).
+- **Tipprunden:** pro Spieler höchstens eine offene Runde. Tipps sind gesperrt, sobald der Spieler kämpft oder
+  etwas verliert, damit niemand mit Vorwissen tippt. Auflösung über die eigenen Tode seit dem Öffnen.
+- **Handicaps:** nur im Wettkampf und nur auf Wunsch. Auswahl über `rando.prng` aus Lobby-Code, Versuch und
+  Zähler (für alle gleich). „Gebietschance verfällt“ trifft nur ein völlig freies Gebiet, damit kein Handicap
+  Monster tötet.
+- **Kampfstatistik:** „K.O.“ heißt: Die KP eines Gegners fallen auf 0, während das Monster aktiv ist. Ohne
+  Profil-Adressen gibt es nur Kampfteilnahmen.
+- **Zeitleiste:** eigene, kompakte Ereignisliste im Run-Zustand (höchstens 2000 Einträge), SVG ohne
+  Bibliotheken aus Lua; „online“ wird nur als Ende einer Offline-Zeit eingetragen.
+- **Verstöße:** eine zentrale Funktion `Ctx:violation`, damit jede Art gleich gezählt, gemeldet und gespeichert wird.
+
+## E29 – JSON: markierte Arrays mit Textschlüsseln werden Objekte (05.10.2026)
+
+Ein leer gespeichertes `{}` kam als `[]` zurück und wurde als Array markiert. Später ergänzte Textschlüssel
+(z. B. freigeschaltete Erfolge) gingen beim nächsten Speichern verloren. Jetzt entscheidet der Inhalt: Eine
+markierte, aber nicht leere Tabelle mit Textschlüsseln wird als Objekt geschrieben. Gefunden hat das der Server-Test
+für Erfolge.
