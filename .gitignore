@@ -1,0 +1,10 @@
+node_modules/
+server/data/
+bridge/exchange/
+backups/
+local/
+*.log
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/usage.statistics.xml
+.idea/shelf/

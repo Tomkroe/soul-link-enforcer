@@ -1,0 +1,18 @@
+{
+  "name": "soul-link-enforcer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Soul-Link-Enforcer für DeSmuME: Regel-Engine (Lua), Vermittlungsserver und Run-Übersicht",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server/src/index.js",
+    "server": "node server/src/index.js",
+    "bridge": "node bridge/bridge.js",
+    "test": "npm run test:lua && npm run test:server",
+    "test:lua": "node scripts/run-lua-tests.js",
+    "test:server": "node --test server/test/"
+  }
+}
