@@ -6,4 +6,5 @@ return {
   "core.rules_test",
   "core.catchup_test",
   "core.api_test",
+  "net.client_test",
 }
