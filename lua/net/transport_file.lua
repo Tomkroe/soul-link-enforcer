@@ -27,8 +27,14 @@ function Transport.new(opts)
   self.out_n = 0
   self.in_n = 1
   self.synced = false
-  self:write({ op = "bridge_reset", nonce = self.nonce })
+  self:write_reset()
   return self
+end
+
+-- Der Reset wird wiederholt, bis das Schreiben klappt (z. B. wenn der Austauschordner erst noch
+-- von der Brücke angelegt wird).
+function Transport:write_reset()
+  self.reset_written = self:write({ op = "bridge_reset", nonce = self.nonce }) and true or false
 end
 
 function Transport:write(msg)
@@ -47,6 +53,7 @@ end
 function Transport:receive(max)
   local out = {}
   max = max or 50
+  if not self.synced and not self.reset_written then self:write_reset() end
   while #out < max do
     local path = self.dir .. "/in/" .. pad(self.in_n, 8) .. ".json"
     local text = self.fs.read(path)

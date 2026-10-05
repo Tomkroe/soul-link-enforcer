@@ -64,6 +64,21 @@ T.test("Brücke: alte Dateien werden bis zur Reset-Bestätigung ignoriert", func
   T.eq(s.c:status_text(), "Keine Verbindung zum Server")
 end)
 
+T.test("Reset wird wiederholt, wenn der Austauschordner noch fehlt", function()
+  local mem = FS.memory()
+  local fail = true
+  local fs = {
+    read = mem.read, exists = mem.exists, remove = mem.remove,
+    write_atomic = function(p, t) if fail then return false, "Ordner fehlt" end return mem.write_atomic(p, t) end,
+  }
+  local tr = Transport.new({ dir = "ex", fs = fs, session = "1", nonce = "n" })
+  T.no(tr.reset_written)
+  fail = false
+  tr:receive()
+  T.ok(tr.reset_written)
+  T.ok(mem.files["ex/out/1_00000002.json"]:find("bridge_reset"))
+end)
+
 T.test("Anmeldung nach Verbindungsaufbau, Ereignisse mit Bestätigung", function()
   local s = setup()
   s.bridge:pump(); s.c:poll()

@@ -1,8 +1,13 @@
 node_modules/
 server/data/
-bridge/exchange/
-backups/
-local/
+bridge/exchange/in/*
+bridge/exchange/out/*
+!bridge/exchange/in/.gitkeep
+!bridge/exchange/out/.gitkeep
+backups/*
+!backups/.gitkeep
+local/*
+!local/.gitkeep
 *.log
 .idea/workspace.xml
 .idea/tasks.xml
