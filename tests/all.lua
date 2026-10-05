@@ -7,4 +7,7 @@ return {
   "core.catchup_test",
   "core.api_test",
   "net.client_test",
+  "mem.pkm_test",
+  "mem.guard_test",
+  "mem.detect_test",
 }
