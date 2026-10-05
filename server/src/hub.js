@@ -173,10 +173,16 @@ class Hub {
     this.send(conn, { op: 'ack', seq, error: result.error || undefined });
   }
 
-  // Run zurücksetzen (aus der Übersicht erlaubt): zurück in die Lobby, ohne Server-Neustart.
+  // Run zurücksetzen (aus der Übersicht): zurück in die Lobby UND die gespeicherte Bilanz/Verstöße/
+  // Friedhof komplett löschen (persistent). Spieler bleiben verbunden; alle sehen sofort die saubere Lobby.
   resetRun(conn) {
     const lobby = conn.lobby && this.lobbies.get(conn.lobby);
     if (!lobby) return this.send(conn, { op: 'error', message: 'Keine Lobby zum Zurücksetzen.' });
+    // Gespeicherte Bilanz (Siege, Tode, Versuche, Verstöße, Todesprotokoll) leeren.
+    this.ledger = { players: {}, constellations: {}, deathlog: [], violations: [] };
+    this.dirtyStats = true;
+    // In-Memory-Run zurück in die Lobby; apply() verteilt den Zustand und stößt das Speichern an
+    // (dadurch wird auch die geleerte Bilanz persistiert).
     this.apply(lobby, { type: 'reset_run' });
   }
 

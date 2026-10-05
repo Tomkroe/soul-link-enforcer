@@ -48,7 +48,8 @@ end
 function Auto:prologue_available()
   local p = self.profile.prologue
   if not p or not p.inputs or #p.inputs == 0 then return false, "keine Eingabefolge im Profil (Aufnahme mit Taste K)" end
-  if not p.done then return false, "keine Ende-Bedingung im Profil" end
+  -- done ist optional: ohne Ende-Bedingung endet der Prolog, wenn die Aufnahme durch ist
+  -- (die Aufnahme endet genau am ersten freien Schritt).
   return true
 end
 
@@ -81,10 +82,14 @@ function Auto:prologue_tick(enabled, snap, player_name)
     return
   end
   if self.prologue_state == "läuft" then
-    if self:check(p.done) then
+    if p.done and self:check(p.done) then
       self:finish_prologue(player_name, "Prolog übersprungen – du kannst frei laufen.")
     elseif not self.inputs:busy() then
-      self:finish_prologue(player_name, "Eingabefolge zu Ende, Ende-Bedingung nicht erreicht – bitte selbst weiterspielen.", "warn")
+      if p.done then
+        self:finish_prologue(player_name, "Eingabefolge zu Ende, Ende-Bedingung nicht erreicht – bitte selbst weiterspielen.", "warn")
+      else
+        self:finish_prologue(player_name, "Prolog übersprungen (Aufnahme zu Ende) – du kannst frei laufen.")
+      end
     end
   end
 end

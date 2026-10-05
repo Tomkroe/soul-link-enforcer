@@ -80,7 +80,7 @@ function setConn(text, cls) {
 
 $('#resetbtn').addEventListener('click', () => {
   if (!ws || ws.readyState !== 1) return;
-  if (confirm('Run wirklich zurücksetzen? Alle gehen zurück in die Lobby; der Fortschritt des aktuellen Versuchs geht verloren.')) {
+  if (confirm('Run KOMPLETT zurücksetzen? Alle gehen zurück in die Lobby, und Bilanz, Verstöße und Todesprotokoll werden GELÖSCHT (unwiderruflich).')) {
     ws.send(JSON.stringify({ op: 'reset' }));
   }
 });

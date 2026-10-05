@@ -50,7 +50,9 @@ return {
     bag_battle = { rel = "party", offset = 0xC88, slots = 30, tested = false },
     -- Item-Tasche (Beginn des Beutels, abgeleitet: Medizin - (165+50+100+12)*4 = Team +0x590, 165 Plätze)
     -- für Sonderbonbons.
-    bag_items = { rel = "party", offset = 0x590, slots = 165, tested = false },
+    -- Taschen-Layout bestätigt 05.10.2026: bag_balls (+0xC4C) liest Poké Ball (ID 4) x6.
+    -- bag_items (+0x590) ist die Items-Tasche daneben (Sonderbonbons). tested = true für den Schreibzugriff.
+    bag_items = { rel = "party", offset = 0x590, slots = 165, tested = true },
 
     -- Aktuelle Karte (Kartennummer, u16). [IM] childMapHeader
     -- Bestätigt 05.10.2026: wechselt beim Kartenwechsel (See 334 <-> Route 342), stabil am selben Ort.
@@ -127,5 +129,7 @@ return {
     tested = false,
   },
 
-  prologue = { tested = false, inputs = {} },
+  -- Prolog-Eingabefolge aus der Aufnahme (Taste K) vom 05.10.2026. Endet am ersten freien Schritt;
+  -- ohne done-Merkmal beendet die Automatik den Prolog, wenn die Aufnahme durch ist.
+  prologue = { tested = true, inputs = require("profiles.CPUD_prologue") },
 }
