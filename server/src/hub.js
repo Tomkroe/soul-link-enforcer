@@ -103,6 +103,7 @@ class Hub {
       case 'ping': return this.send(conn, { op: 'pong', t: this.now() });
       case 'event': return this.clientEvent(conn, msg);
       case 'reset': return this.resetRun(conn);
+      case 'clear_violations': return this.clearViolations(conn);
       case 'template_save': return this.saveTemplate(conn, msg);
       default: return this.send(conn, { op: 'error', message: `Unbekannte Operation: ${msg.op}` });
     }
@@ -177,6 +178,16 @@ class Hub {
     const lobby = conn.lobby && this.lobbies.get(conn.lobby);
     if (!lobby) return this.send(conn, { op: 'error', message: 'Keine Lobby zum Zurücksetzen.' });
     this.apply(lobby, { type: 'reset_run' });
+  }
+
+  // Regelverstöße löschen (Debug/manuelle Korrektur aus der Übersicht).
+  clearViolations(conn) {
+    const lobby = conn.lobby && this.lobbies.get(conn.lobby);
+    if (!lobby) return this.send(conn, { op: 'error', message: 'Keine Lobby.' });
+    this.ledger.violations = [];
+    this.dirtyStats = true;
+    this.scheduleSave();
+    this.broadcast(lobby, []);
   }
 
   async saveTemplate(conn, msg) {

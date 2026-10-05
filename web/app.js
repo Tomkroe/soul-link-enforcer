@@ -85,6 +85,12 @@ $('#resetbtn').addEventListener('click', () => {
   }
 });
 
+// Debug/Korrektur aus der Übersicht
+window.slClearViolations = function () {
+  if (!ws || ws.readyState !== 1) return;
+  if (confirm('Alle Regelverstöße löschen?')) ws.send(JSON.stringify({ op: 'clear_violations' }));
+};
+
 // Verbindung -------------------------------------------------------------------
 
 function defaultServer() {
@@ -361,10 +367,11 @@ function renderAchievements(state, ledger) {
 
 function renderViolations(state, ledger) {
   const log = (ledger && ledger.violations) || [];
+  const clearBtn = '<p><button type="button" class="danger small" onclick="slClearViolations()">Alle Verstöße löschen</button></p>';
   if (!log.length) return '<p class="muted">Keine Regelverstöße.</p>';
   const rows = log.slice(0, 100).map((v) => `<tr><td>${time(v.t)}</td><td>${v.attempt ?? ''}</td>
     <td>${esc(v.player_name || pname(state, v.player))}</td><td>${esc(VIOLATIONS[v.kind] || v.kind)}</td><td>${esc(v.text)}</td></tr>`).join('');
-  return `<div class="scroll"><table><thead><tr><th>Zeit</th><th>Versuch</th><th>Spieler</th><th>Art</th><th>Meldung</th></tr></thead>
+  return clearBtn + `<div class="scroll"><table><thead><tr><th>Zeit</th><th>Versuch</th><th>Spieler</th><th>Art</th><th>Meldung</th></tr></thead>
     <tbody>${rows}</tbody></table></div>`;
 }
 
