@@ -244,3 +244,15 @@ test('HTTP: /health und Run-Übersicht werden ausgeliefert', async () => {
     await srv.stop();
   }
 });
+
+test('Run-Übersicht: statische Dateien werden ausgeliefert', async () => {
+  const { srv, port } = await startServer();
+  try {
+    const html = await (await fetch(`http://127.0.0.1:${port}/`)).text();
+    assert.match(html, /Run-Übersicht/);
+    const js = await fetch(`http://127.0.0.1:${port}/app.js`);
+    assert.equal(js.headers.get('content-type'), 'text/javascript; charset=utf-8');
+  } finally {
+    await srv.stop();
+  }
+});

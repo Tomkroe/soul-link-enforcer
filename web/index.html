@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Soul-Link Run-Übersicht</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <h1>Soul-Link <span class="muted">Run-Übersicht</span></h1>
+    <form id="connect" class="connect">
+      <label>Server <input id="server" placeholder="wss://dein-server/ws" autocomplete="off" required></label>
+      <label>Lobby <input id="lobby" placeholder="SOUL01" maxlength="16" autocomplete="off" required></label>
+      <button type="submit">Verbinden</button>
+      <span id="conn" class="pill pill-off">getrennt</span>
+    </form>
+  </header>
+
+  <main id="app">
+    <p class="empty" id="hint">Server-Adresse und Lobby-Code eingeben. Die Seite zeigt den Run nur an und verändert nichts.</p>
+  </main>
+
+  <footer class="foot muted">Nur Anzeige · Monster als Text (Name, Typ), keine Spielgrafiken · aktualisiert sich live</footer>
+  <script src="app.js"></script>
+</body>
+</html>

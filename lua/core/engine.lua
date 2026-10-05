@@ -380,7 +380,9 @@ function handlers.offline(ctx, ev)
     local others = M.teammates(state, ev.player)
     if #others > 0 then
       ctx:notify(p.name .. " ist offline (kein Herzschlag). Aufhol-Modus aktiv.", "warn", others)
-      ctx:log("offline", p.name .. " ist offline – Aufhol-Modus für " .. U.join(others) .. ".", { player = ev.player })
+      local names = {}
+      for _, q in ipairs(others) do names[#names + 1] = M.player_name(state, q) end
+      ctx:log("offline", p.name .. " ist offline – Aufhol-Modus für " .. table.concat(names, ", ") .. ".", { player = ev.player })
     end
   end
 end
