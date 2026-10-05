@@ -485,7 +485,8 @@ function handlers.status(ctx, ev)
     local area = area_of(ev, p)
     if p.area.key ~= area.key then
       p.area = U.map({ key = area.key, name = area.name })
-      M.ensure_area(team, area, ctx.t)
+      local ar_new = M.ensure_area(team, area, ctx.t)
+      ctx:apply_catch_handicap(ev.player, team, ar_new)
       local allowed, reason, kind = R.catch_allowed(state, ev.player, area.key)
       if allowed then
         ctx:notify("Fang offen in " .. area.name .. ".", "info", { ev.player })
@@ -505,6 +506,8 @@ function handlers.status(ctx, ev)
           "Regelverstoß: " .. p.name .. " hat im Aufhol-Modus einen Orden geholt. " .. reason, "alarm")
       end
       ctx:resolve_tips(ev.player, "orden")
+      ctx:end_handicaps_on_badge(team, ev.player)
+      ctx:check_handicaps()
       -- Zähler für Erfolge
       ctx:emit({ type = "stat", player = ev.player, key = "badges", delta = ev.badges - before })
       if p.deaths == 0 then ctx:emit({ type = "stat", player = ev.player, key = "flawless_badge", delta = 1 }) end
@@ -743,7 +746,9 @@ function handlers.item_used(ctx, ev)
   if count <= 0 then return end
   local rule = ctx.state.settings.battle_items
   local violation
-  if rule.mode == "verboten" then
+  if R.handicap(ctx.state, ev.player, "items_verboten") then
+    violation = "Handicap: Items im Kampf verboten bis zum nächsten Orden"
+  elseif rule.mode == "verboten" then
     violation = "Items im Kampf sind verboten"
   elseif rule.mode == "max" and count > rule.max then
     violation = "höchstens " .. U.num(rule.max) .. " Item(s) pro Kampf erlaubt"
@@ -790,6 +795,88 @@ function handlers.party(ctx, ev)
     end
   end
   p.party = party
+end
+
+-- Handicap-Ereignisse im Wettkampf (Idee für später, umgesetzt) ------------------
+
+E.HANDICAPS = {
+  { kind = "cap_minus", text = "Level-Cap −3 bis zum nächsten Orden" },
+  { kind = "items_verboten", text = "Items im Kampf verboten bis zum nächsten Orden" },
+  { kind = "fang_verfaellt", text = "Die nächste freie Gebietschance verfällt" },
+}
+
+local function team_avg_badges(state, team)
+  local sum = 0
+  for _, q in ipairs(team.members) do sum = sum + state.players[q].badges end
+  return sum / math.max(1, #team.members)
+end
+
+--- Nach jedem Orden: Liegt ein aktives Team um mindestens "gap" Orden vor dem nächstbesten aktiven Team und
+-- hat es noch kein Handicap, bekommt es eines (gleich für alle: Auswahl über einen festen Zufall).
+function Ctx:check_handicaps()
+  local state = self.state
+  local cfg = state.settings.handicaps
+  if not cfg or not cfg.enabled or #state.team_order < 2 then return end
+  local best, second
+  for _, tid in ipairs(state.team_order) do
+    local team = state.teams[tid]
+    if team.status == "aktiv" then
+      local v = team_avg_badges(state, team)
+      if not best or v > best.v then
+        second = best
+        best = { team = team, v = v }
+      elseif not second or v > second.v then
+        second = { team = team, v = v }
+      end
+    end
+  end
+  if not best or not second or best.v - second.v < cfg.gap then return end
+  for _, h in ipairs(best.team.handicaps or {}) do
+    if h.active then return end
+  end
+  state.counters.handicap = (state.counters.handicap or 0) + 1
+  local PRNG = require("rando.prng")
+  local rng = PRNG.new(state.code .. "|H|" .. U.num(state.attempt) .. "|" .. U.num(state.counters.handicap))
+  local choice = E.HANDICAPS[rng:int(#E.HANDICAPS)]
+  best.team.handicaps = best.team.handicaps or U.list()
+  best.team.handicaps[#best.team.handicaps + 1] = U.map({
+    kind = choice.kind, text = choice.text, active = true, since = self.t, badges_at = U.copy(self:team_badges(best.team)),
+  })
+  local text = "Handicap für " .. best.team.name .. " (Vorsprung " .. U.num(best.v - second.v) .. " Orden): " .. choice.text .. "."
+  self:notify(text, "warn")
+  self:log("handicap", text, { team = best.team.id })
+  self:discord("handicap", text)
+end
+
+function Ctx:team_badges(team)
+  local out = U.map()
+  for _, q in ipairs(team.members) do out[q] = self.state.players[q].badges end
+  return out
+end
+
+--- Handicaps bis zum nächsten Orden enden, sobald ein Mitglied einen neuen Orden holt.
+function Ctx:end_handicaps_on_badge(team, pid)
+  for _, h in ipairs(team.handicaps or {}) do
+    if h.active and (h.kind == "cap_minus" or h.kind == "items_verboten")
+      and self.state.players[pid].badges > (h.badges_at[pid] or 0) then
+      h.active = false
+      h.ended = self.t
+      self:notify("Handicap beendet für " .. team.name .. ": " .. h.text .. ".", "info")
+    end
+  end
+end
+
+--- "Nächste Gebietschance verfällt": beim Betreten eines noch ganz freien Gebiets.
+function Ctx:apply_catch_handicap(pid, team, ar)
+  local h = R.handicap(self.state, pid, "fang_verfaellt")
+  if not h or ar.consumed or ar.group ~= "" or next(ar.by) ~= nil then return end
+  ar.consumed = true
+  ar.consumed_by = "handicap"
+  h.active = false
+  h.ended = self.t
+  local text = "Handicap: " .. ar.name .. " ist für " .. team.name .. " verbraucht."
+  self:notify(text, "warn", team.members)
+  self:log("handicap", text, { team = team.id })
 end
 
 -- Tipprunden vor Arenen (Idee für später, umgesetzt) ---------------------------

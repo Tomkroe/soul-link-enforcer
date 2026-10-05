@@ -10,6 +10,7 @@ return {
   "core.ledger_test",
   "core.competition_test",
   "core.tips_test",
+  "core.handicap_test",
   "net.client_test",
   "net.local_hub_test",
   "mem.pkm_test",

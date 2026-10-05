@@ -155,12 +155,15 @@ function renderPlayers(state, stats) {
 }
 
 function renderRanking(state, derived) {
-  const rows = derived.ranking.map((r) => `<tr><td>${r.rank}.</td><td>${esc(r.name)}</td><td class="st-${r.status}">${r.status}</td>
-    <td>${r.progress.toFixed(1)}</td><td>${r.alive}</td><td>${r.deaths}</td></tr>`).join('');
+  const rows = derived.ranking.map((r) => {
+    const hs = (state.teams[r.team].handicaps || []).filter((h) => h.active).map((h) => esc(h.text)).join('; ');
+    return `<tr><td>${r.rank}.</td><td>${esc(r.name)}</td><td class="st-${r.status}">${r.status}</td>
+    <td>${r.progress.toFixed(1)}</td><td>${r.alive}</td><td>${r.deaths}</td><td>${hs || '–'}</td></tr>`;
+  }).join('');
   const mode = state.settings.scoring === 'ueberleben' ? 'Überleben' : 'Rennen';
   const goal = state.settings.goal.kind === 'orden' ? `${state.settings.goal.value} Orden` : 'Spielende';
   return `<p class="muted">Wertung: ${mode} · Ziel: ${goal}</p><div class="scroll"><table><thead><tr><th>#</th><th>Team</th><th>Status</th>
-    <th>Orden Ø</th><th>lebende Monster</th><th>Tode</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    <th>Orden Ø</th><th>lebende Monster</th><th>Tode</th><th>Handicap</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
 function renderGroups(state, team) {

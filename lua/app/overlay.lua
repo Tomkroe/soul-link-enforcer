@@ -175,6 +175,12 @@ function Overlay.ranking(state, pid)
   local mine = state.players[pid] and state.players[pid].team
   local label = state.settings.scoring == "ueberleben" and "Überleben" or "Rennen"
   out[#out + 1] = { text = "Rangliste (" .. label .. ")", color = "weiss" }
+  local team = M.team_of(state, pid)
+  for _, h in ipairs(team and team.handicaps or {}) do
+    if h.active then
+      for _, l in ipairs(Overlay.wrap("HANDICAP: " .. h.text)) do out[#out + 1] = { text = l, color = "rot" } end
+    end
+  end
   for _, r in ipairs(R.ranking(state)) do
     local status = r.status == "fertig" and " – Ziel!" or (r.status == "verloren" and " – raus" or "")
     -- Kurzname (nur Spieler), damit die Zeile in die DS-Breite passt

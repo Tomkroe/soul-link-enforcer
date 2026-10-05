@@ -225,7 +225,20 @@ function R.level_cap(state, pid, gym_levels)
   if not state.settings.level_cap then return nil end
   local p = state.players[pid]
   if not p or not gym_levels then return nil end
-  return gym_levels[p.badges + 1]
+  local cap = gym_levels[p.badges + 1]
+  if cap and R.handicap(state, pid, "cap_minus") then cap = math.max(1, cap - R.HANDICAP_CAP_MINUS) end
+  return cap
+end
+
+R.HANDICAP_CAP_MINUS = 3
+
+--- Aktives Handicap einer Art für das Team des Spielers (oder nil).
+function R.handicap(state, pid, kind)
+  local team = M.team_of(state, pid)
+  for _, h in ipairs(team and team.handicaps or {}) do
+    if h.active and h.kind == kind then return h end
+  end
+  return nil
 end
 
 --- Gebiets-Übersicht für Overlay und Run-Übersicht.
