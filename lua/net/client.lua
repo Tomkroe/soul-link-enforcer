@@ -88,6 +88,12 @@ function Client:send_event(ev)
   return item.seq
 end
 
+--- Sendet eine Nachricht außerhalb der Ereignis-Warteschlange (z. B. Vorlage speichern). Nur wenn angemeldet.
+function Client:send_op(msg)
+  if not self.welcomed then return false end
+  return self.transport:send(msg)
+end
+
 function Client:resend_all()
   for _, item in ipairs(self.queue) do
     self.transport:send({ op = "event", seq = item.seq, event = item.event })
@@ -111,6 +117,7 @@ function Client:handle(msg)
   elseif op == "welcome" then
     self.welcomed = true
     self.player = msg.player
+    self.templates = msg.templates or self.templates
     local last = msg.last_seq or 0
     -- Bereits bestätigte Ereignisse verwerfen, Rest erneut senden.
     local rest = {}
@@ -132,6 +139,7 @@ function Client:handle(msg)
   elseif op == "state" then
     self.state = msg.state
     self.derived = msg.derived
+    if msg.ledger then self.ledger = msg.ledger end
     if msg.stats then
       self.stats = msg.stats
       self.stats_local = false
@@ -140,6 +148,8 @@ function Client:handle(msg)
     if self.fs and self.stats_path and msg.stats then
       self.fs.write_atomic(self.stats_path, json.encode(msg.stats))
     end
+  elseif op == "templates" then
+    self.templates = msg.templates
   elseif op == "effects" then
     for _, e in ipairs(msg.effects or {}) do self.effects[#self.effects + 1] = e end
   elseif op == "error" then

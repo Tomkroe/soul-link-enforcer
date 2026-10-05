@@ -362,3 +362,49 @@ end)
 T.test("Selbsttest der Schreibfunktionen", function()
   T.ok(App.selftest())
 end)
+
+T.test("Lobby: Vorlage vom Server, Änderungen, Teams und Speichern als eigene Vorlage", function()
+  local app, emu, mem = make_app()
+  app.cfg.lobby_settings = { template = "Meine", changes = { grace = false }, save_as = "Neu",
+    teams = { { "Anna", "Ben" }, { "Cem" } } }
+  local E = require("core.engine")
+  local st = E.new_state("ABC")
+  for _, p in ipairs({ "anna", "ben", "cem" }) do E.apply(st, { type = "join", player = p, t = 1 }) end
+  deliver(app, mem, { { op = "welcome", player = "anna", last_seq = 0, templates = { Meine = { level_cap = false } } },
+    { op = "state", state = st } })
+  app:tick()
+  emu.pressed = { N = true }
+  app:frame()
+  local sent = outbox(mem)
+  local kinds = {}
+  for _, m in ipairs(sent) do
+    if m.op == "event" then kinds[#kinds + 1] = m.event.type end
+    if m.op == "template_save" then
+      kinds[#kinds + 1] = "template_save"
+      T.eq(m.name, "Neu")
+      T.eq(m.settings.level_cap, false)
+      T.eq(m.settings.grace, false)
+    end
+  end
+  local tail = {}
+  for i = #kinds - 4, #kinds do tail[#tail + 1] = kinds[i] end
+  T.eq(tail, { "set_settings", "set_settings", "template_save", "set_teams", "start_run" })
+  for _, m in ipairs(sent) do
+    if m.op == "event" and m.event.type == "set_teams" then T.eq(m.event.teams, { { "anna", "ben" }, { "cem" } }) end
+  end
+end)
+
+T.test("Lobby: unbekannte Vorlage -> Hinweis, kein Start", function()
+  local app, emu, mem = make_app()
+  app.cfg.lobby_settings = { template = "Gibtsnicht" }
+  local E = require("core.engine")
+  local st = E.new_state("ABC")
+  E.apply(st, { type = "join", player = "anna", t = 1 })
+  deliver(app, mem, { { op = "welcome", player = "anna", last_seq = 0 }, { op = "state", state = st } })
+  app:tick()
+  local before = #outbox(mem)
+  emu.pressed = { N = true }
+  app:frame()
+  T.eq(#outbox(mem), before)
+  T.ok(app.messages[#app.messages].text:find("Gibtsnicht"))
+end)

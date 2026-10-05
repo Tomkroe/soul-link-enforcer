@@ -26,14 +26,15 @@ class Hub {
     this.now = now;
     this.logger = logger;
     this.lobbies = new Map(); // code -> { state, meta, conns:Set, dirty }
-    this.stats = {};          // spieler_id -> { name, deaths, dragged, attempts, wins }
+    this.ledger = { players: {}, constellations: {} }; // Bilanz, fortgeschrieben von core/ledger.lua
     this.templates = {};      // name -> Einstellungen
     this.saveTimer = null;
     this.dirtyStats = false;
   }
 
   async init() {
-    this.stats = (await this.store.get('stats')) || {};
+    // Bilanz (Spieler + Team-Konstellationen). Ältere Speicherstände hatten nur "stats" (Spieler).
+    this.ledger = (await this.store.get('ledger')) || { players: (await this.store.get('stats')) || {}, constellations: {} };
     this.templates = (await this.store.get('templates')) || {};
     for (const key of await this.store.list('lobby:')) {
       const saved = await this.store.get(key);
@@ -197,6 +198,12 @@ class Hub {
     }
     lobby.state = state;
     lobby.dirty = true;
+    if (effects.some((e) => e.type === 'stat' || e.type === 'reset_stats' || e.type === 'result')) {
+      const names = {};
+      for (const pid of lobby.state.order) names[pid] = lobby.state.players[pid].name;
+      this.ledger = this.core.ledgerApply(this.ledger, effects, names);
+      this.dirtyStats = true;
+    }
     for (const eff of effects) this.handleEffect(lobby, eff);
     this.broadcast(lobby, effects);
     this.scheduleSave();
@@ -204,18 +211,7 @@ class Hub {
   }
 
   handleEffect(lobby, eff) {
-    if (eff.type === 'stat') {
-      const p = lobby.state.players[eff.player];
-      const s = this.stats[eff.player] || (this.stats[eff.player] = { name: p ? p.name : eff.player, deaths: 0, dragged: 0, attempts: 0, wins: 0 });
-      if (p) s.name = p.name;
-      s[eff.key] = (s[eff.key] || 0) + eff.delta;
-      this.dirtyStats = true;
-    } else if (eff.type === 'reset_stats') {
-      for (const pid of eff.players) {
-        if (this.stats[pid]) Object.assign(this.stats[pid], { deaths: 0, dragged: 0 });
-      }
-      this.dirtyStats = true;
-    } else if (eff.type === 'discord' && this.discord) {
+    if (eff.type === 'discord' && this.discord) {
       this.discord.post(eff.kind, eff.text, lobby.state.code);
     }
   }
@@ -223,9 +219,13 @@ class Hub {
   lobbyStats(lobby) {
     const out = {};
     for (const pid of lobby.state.order) {
-      out[pid] = this.stats[pid] || { name: lobby.state.players[pid].name, deaths: 0, dragged: 0, attempts: 0, wins: 0 };
+      out[pid] = this.ledger.players[pid] || { name: lobby.state.players[pid].name, deaths: 0, dragged: 0, attempts: 0, wins: 0 };
     }
     return out;
+  }
+
+  lobbyLedger(lobby) {
+    return this.core.ledgerView(this.ledger, lobby.state.order);
   }
 
   stateMessage(lobby) {
@@ -234,6 +234,7 @@ class Hub {
       state: lobby.state,
       derived: this.core.derive(lobby.state),
       stats: this.lobbyStats(lobby),
+      ledger: this.lobbyLedger(lobby),
       server_time: this.now(),
     };
   }
@@ -294,7 +295,7 @@ class Hub {
     }
     if (this.dirtyStats) {
       this.dirtyStats = false;
-      await this.store.set('stats', this.stats);
+      await this.store.set('ledger', this.ledger);
     }
   }
 }

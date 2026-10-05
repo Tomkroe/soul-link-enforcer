@@ -205,12 +205,7 @@ function App:handle_keys()
   local state = self.client.state
   if self:key_pressed(hk.start) and state then
     if state.phase == "lobby" then
-      local ls = self.cfg.lobby_settings
-      if ls and (ls.preset or ls.changes) then
-        self.client:send_event({ type = "set_settings", preset = ls.preset, changes = ls.changes })
-      end
-      self.client:send_event({ type = "start_run" })
-      self:note("Run-Start angefordert.")
+      self:start_from_lobby(state)
     elseif state.phase == "finished" then
       self.client:send_event({ type = "new_attempt" })
       self:note("Neuer Versuch angefordert – zurück in die Lobby.")
@@ -225,6 +220,42 @@ function App:handle_keys()
     self:note("Sperre für 30 s ausgesetzt (Weg zum PC).", "warn")
   end
   self.prev_keys = self.keys
+end
+
+--- Lobby: Vorlage/Einstellungen und Teams aus config.lua setzen, optional als eigene Vorlage speichern, Run starten.
+function App:start_from_lobby(state)
+  local ls = self.cfg.lobby_settings or {}
+  local Settings = require("core.settings")
+  local settings = Settings.defaults()
+  if ls.template then
+    local tpl = (self.client.templates or {})[ls.template]
+    if not tpl then
+      self:note("Vorlage '" .. tostring(ls.template) .. "' gibt es auf dem Server nicht.", "warn")
+      return
+    end
+    self.client:send_event({ type = "set_settings", preset = tpl })
+    settings = Settings.apply_preset(settings, tpl) or settings
+  elseif ls.preset then
+    self.client:send_event({ type = "set_settings", preset = ls.preset })
+    settings = Settings.apply_preset(settings, ls.preset) or settings
+  end
+  if ls.changes then
+    self.client:send_event({ type = "set_settings", changes = ls.changes })
+    settings = Settings.apply_changes(settings, ls.changes) or settings
+  end
+  if ls.save_as and ls.save_as ~= "" then
+    self.client:send_op({ op = "template_save", name = ls.save_as, settings = settings })
+  end
+  if ls.teams and #ls.teams > 0 then
+    local teams = {}
+    for i, members in ipairs(ls.teams) do
+      teams[i] = {}
+      for j, name in ipairs(members) do teams[i][j] = tostring(name):lower():gsub("%s+", "_") end
+    end
+    self.client:send_event({ type = "set_teams", teams = teams })
+  end
+  self.client:send_event({ type = "start_run" })
+  self:note("Run-Start angefordert.")
 end
 
 --- Eingabe-Aufnahme (für die Prolog-Eingabefolge im Profil) starten/beenden.

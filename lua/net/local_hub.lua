@@ -5,6 +5,7 @@
 
 local json = require("lib.json")
 local E = require("core.engine")
+local L = require("core.ledger")
 
 local Hub = {}
 Hub.__index = Hub
@@ -19,7 +20,8 @@ function Hub.new(opts)
   self.pid = tostring(opts.name):lower():gsub("%s+", "_")
   self.code = "SOLO"
   self.state_path = opts.dir .. "/solo_" .. self.pid .. ".json"
-  self.stats_path = opts.dir .. "/todeszaehler.json"
+  self.ledger_path = opts.dir .. "/bilanz_solo.json"
+  self.dir = opts.dir
   self.settings = opts.settings
   self.auto_start = opts.auto_start ~= false
   self.synced = true
@@ -39,14 +41,15 @@ function Hub:load()
     self.state = E.new_state(self.code)
     self.acks = 0
   end
-  local stext = self.fs.read(self.stats_path)
-  local sok, stats = pcall(json.decode, stext or "")
-  self.stats = (sok and type(stats) == "table") and stats or json.object()
+  local ltext = self.fs.read(self.ledger_path)
+  local lok, ledger = pcall(json.decode, ltext or "")
+  self.ledger = (lok and type(ledger) == "table" and ledger.players) and ledger or L.new()
+  self.stats = self.ledger.players
 end
 
 function Hub:save()
   self.fs.write_atomic(self.state_path, json.encode(json.object({ state = self.state, acks = self.acks })))
-  self.fs.write_atomic(self.stats_path, json.encode(self.stats))
+  self.fs.write_atomic(self.ledger_path, json.encode(self.ledger))
 end
 
 function Hub:push(msg)
@@ -61,24 +64,13 @@ function Hub:my_stats()
 end
 
 function Hub:push_state()
-  self:push({ op = "state", state = self.state, stats = self:my_stats(), server_time = self.now() })
+  self:push({ op = "state", state = self.state, stats = self:my_stats(), ledger = L.view(self.ledger, { self.pid }),
+    server_time = self.now() })
 end
 
 function Hub:handle_effects(effects)
-  for _, e in ipairs(effects) do
-    if e.type == "stat" then
-      local s = self.stats[e.player]
-      if not s then
-        s = { name = self.name, deaths = 0, dragged = 0, attempts = 0, wins = 0 }
-        self.stats[e.player] = s
-      end
-      s[e.key] = (s[e.key] or 0) + e.delta
-    elseif e.type == "reset_stats" then
-      for _, pid in ipairs(e.players) do
-        if self.stats[pid] then self.stats[pid].deaths, self.stats[pid].dragged = 0, 0 end
-      end
-    end
-  end
+  L.apply(self.ledger, effects, { [self.pid] = self.name })
+  self.stats = self.ledger.players
 end
 
 --- Wendet ein Ereignis an. Rückgabe: Fehlertext oder nil.
@@ -98,19 +90,34 @@ function Hub:hello()
   self:apply({ type = "join", name = self.name })
   self:apply({ type = "online" })
   if self.state.phase == "lobby" and self.auto_start then
-    if self.settings and self.settings.preset then self:apply({ type = "set_settings", preset = self.settings.preset }) end
+    local tpl = self.settings and self.settings.template and self:templates()[self.settings.template]
+    if tpl then self:apply({ type = "set_settings", preset = tpl }) end
+    if self.settings and self.settings.preset and not tpl then self:apply({ type = "set_settings", preset = self.settings.preset }) end
     if self.settings and self.settings.changes then self:apply({ type = "set_settings", changes = self.settings.changes }) end
     self:apply({ type = "start_run" })
   end
   self:save()
-  self:push({ op = "welcome", role = "player", lobby = self.code, player = self.pid, last_seq = self.acks })
+  self:push({ op = "welcome", role = "player", lobby = self.code, player = self.pid, last_seq = self.acks,
+    templates = self:templates() })
   self:push_state()
+end
+
+function Hub:templates()
+  local ok, t = pcall(json.decode, self.fs.read(self.dir .. "/vorlagen.json") or "")
+  return (ok and type(t) == "table") and t or json.object()
 end
 
 --- Nachricht vom Client.
 function Hub:send(msg)
   if msg.op == "hello" then
     self:hello()
+  elseif msg.op == "template_save" then
+    local t = self:templates()
+    if type(msg.name) == "string" and msg.name ~= "" and type(msg.settings) == "table" then
+      t[msg.name] = msg.settings
+      self.fs.write_atomic(self.dir .. "/vorlagen.json", json.encode(t))
+    end
+    self:push({ op = "templates", templates = t })
   elseif msg.op == "ping" then
     self:push({ op = "pong", t = self.now() })
   elseif msg.op == "event" then

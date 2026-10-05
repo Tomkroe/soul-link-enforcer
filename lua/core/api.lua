@@ -6,6 +6,7 @@ local E = require("core.engine")
 local R = require("core.rules")
 local M = require("core.model")
 local X = require("core.export")
+local L = require("core.ledger")
 
 local api = {}
 
@@ -39,6 +40,18 @@ function api.derive(state_json)
     })
   end
   return json.encode(out)
+end
+
+--- Bilanz fortschreiben: Rückgabe neue Bilanz.
+function api.ledger_apply(ledger_json, effects_json, names_json)
+  local ledger = json.decode(ledger_json)
+  if type(ledger) ~= "table" or not ledger.players then ledger = L.new() end
+  return json.encode(L.apply(ledger, json.decode(effects_json), json.decode(names_json or "{}")))
+end
+
+--- Bilanz für eine Lobby.
+function api.ledger_view(ledger_json, pids_json)
+  return json.encode(L.view(json.decode(ledger_json), json.decode(pids_json)))
 end
 
 --- Todesprotokoll als Text (für Stream-Overlays).

@@ -7,6 +7,7 @@ return {
   "core.catchup_test",
   "core.api_test",
   "core.export_test",
+  "core.ledger_test",
   "net.client_test",
   "net.local_hub_test",
   "mem.pkm_test",

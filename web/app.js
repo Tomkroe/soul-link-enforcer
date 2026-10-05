@@ -197,6 +197,28 @@ function renderLog(state) {
   return `<ul class="feed">${(items.length ? items : log).join('') || '<li class="muted">Noch keine Einträge.</li>'}</ul>`;
 }
 
+function renderLedger(state, ledger) {
+  if (!ledger) return '<p class="muted">Noch keine Bilanz.</p>';
+  const places = (p) => Object.keys(p || {}).sort((a, b) => a - b).map((k) => `${k}.: ${p[k]}×`).join(', ') || '–';
+  const prow = state.order.map((pid) => {
+    const p = ledger.players[pid] || {};
+    return `<tr><td>${esc(p.name || pid)}</td><td>${p.runs ?? 0}</td><td>${p.wins ?? 0}</td><td>${esc(places(p.places))}</td>
+      <td>${p.deaths ?? 0}</td><td>${p.dragged ?? 0}</td><td>${p.attempts ?? 0}</td></tr>`;
+  }).join('');
+  let html = `<div class="scroll"><table><thead><tr><th>Spieler</th><th>Runs</th><th>Siege</th><th>Platzierungen</th>
+    <th>Tode</th><th>mitgerissen</th><th>Versuche</th></tr></thead><tbody>${prow}</tbody></table></div>`;
+  const cons = Object.values(ledger.constellations || {});
+  if (cons.length) {
+    const rows = cons.map((c) => {
+      const teams = Object.values(c.teams).map((t) => `${esc(t.label)}: ${t.wins} Siege (${esc(places(t.places))})`).join('<br>');
+      return `<tr><td>${esc(c.label)}</td><td>${c.runs}</td><td>${teams}</td></tr>`;
+    }).join('');
+    html += `<h2 style="margin-top:14px">Team-Konstellationen</h2><div class="scroll"><table><thead><tr><th>Konstellation</th>
+      <th>Runs</th><th>Ergebnisse</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
+  return html;
+}
+
 function render() {
   if (!last) return;
   const { state, derived, stats } = last;
@@ -212,5 +234,6 @@ function render() {
   html += card('Aktive Regeln', renderSettings(state.settings));
   html += card('Verlauf', renderLog(state));
   html += card('Frühere Versuche', renderHistory(state), true);
+  html += card('Bilanz (alle Runs)', renderLedger(state, last.ledger), true);
   app.innerHTML = html;
 }

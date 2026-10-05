@@ -46,9 +46,12 @@ return {
   automation = { skip_prologue = false, skip_nickname = false },
 
   -- Einstellungen, die beim Run-Start (Taste N) für alle gesetzt werden.
-  -- Vorlagen: "locker", "klassisch", "hardcore". Einzelne Schalter danach in changes, z. B.
-  -- changes = { level_cap = false, goal = { kind = "orden", value = 8 } }
-  lobby_settings = { preset = "klassisch", changes = nil },
+  --   preset   = "locker" | "klassisch" | "hardcore"
+  --   template = "Name"   eigene, auf dem Server gespeicherte Vorlage (statt preset)
+  --   changes  = einzelne Schalter danach, z. B. { level_cap = false, goal = { kind = "orden", value = 8 } }
+  --   save_as  = "Name"   das Ergebnis als eigene Vorlage speichern
+  --   teams    = Wettkampf-Teams, z. B. { { "Tom", "Anna" }, { "Ben", "Cem" } } (leer = alle in einem Soul Link)
+  lobby_settings = { preset = "klassisch", changes = nil, template = nil, save_as = nil, teams = nil },
 
   overlay = { x = 2, y = 2, compact = false },
 

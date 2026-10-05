@@ -190,13 +190,16 @@ function Ctx:archive_attempt()
     })
   end
   state.history[#state.history + 1] = entry
-  for _, tid in ipairs(state.team_order) do
-    for _, pid in ipairs(state.teams[tid].members) do
-      if state.teams[tid].status == "fertig" and state.teams[tid].place == 1 then
-        self:emit({ type = "stat", player = pid, key = "wins", delta = 1 })
-      end
-    end
+  -- Ergebnis für die dauerhafte Bilanz (core/ledger.lua): Platz aus der Rangliste, Sieg = Platz 1 und Ziel erreicht
+  local teams = U.list()
+  for _, row in ipairs(R.ranking(state)) do
+    local team = state.teams[row.team]
+    teams[#teams + 1] = U.map({
+      team = row.team, members = U.list(U.copy(team.members)), place = row.rank, status = team.status,
+      won = team.status == "fertig" and row.rank == 1,
+    })
   end
+  self:emit({ type = "result", attempt = state.attempt, result = state.result, teams = teams })
 end
 
 -- Lobby -------------------------------------------------------------------
