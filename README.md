@@ -21,7 +21,7 @@ Spielkopie. Das Projekt enthält und lädt **keine ROMs, keine Spielgrafiken, ke
 5. [Script im Emulator starten](#script-im-emulator-starten)
    · [Solo-Modus](#solo-modus-allein-spielen) · [Komfort-Automatiken](#komfort-automatiken)
 6. [Run-Übersicht](#run-übersicht)
-7. [Regeln](#regeln)
+7. [Wettkampf-Modus](#wettkampf-modus-phase-8) · [Regeln](#regeln)
 8. [Schalter und Vorlagen](#schalter-und-vorlagen)
 9. [Discord einrichten](#discord-einrichten)
 10. [Sicherungen zurückspielen](#sicherungen-zurückspielen)
@@ -259,6 +259,37 @@ Monster erscheinen nur als Text (Name, Typ).
 - Vom Server ausgeliefert: `http(s)://<server>/`
 - Über GitHub Pages: Workflow `.github/workflows/pages.yml` (einmalig unter *Settings > Pages > Source*
   „GitHub Actions“ wählen). Aufruf mit `?server=wss://<server>/ws&lobby=SOUL01`.
+
+## Wettkampf-Modus (Phase 8)
+
+2 bis 4 Spieler treten in Teams gegeneinander an. Einteilung in `config.lua` (Taste `N` startet):
+
+```lua
+lobby_settings = {
+  preset = "klassisch",
+  teams = { { "Tom", "Anna" }, { "Ben", "Cem" } },             -- 2v2; auch 1v1, 1v1v1, 1v1v1v1, 2v1v1 …
+  changes = { scoring = "rennen", goal = { kind = "orden", value = 8 } },
+},
+```
+
+- Ein Team mit 2 Spielern ist ein eigener Soul Link mit allen Regeln, ein Team mit 1 Spieler eine Solo-Nuzlocke
+  (Gruppen der Größe 1). Teams mit 3 oder 4 Spielern gibt es nur als gemeinsamen Soul Link ohne Gegner.
+- Jedes Team hat eigene Gruppen, Gebiete, Friedhof und eigenen Zustand. Alle spielen mit demselben Seed und
+  denselben Regeln. Der Aufhol-Modus gilt nur innerhalb eines Teams.
+- Ungleich große Teams (z. B. 2v1v1) sind erlaubt; Lobby und Overlay weisen auf die ungleiche Belastung hin.
+- **Wertung** (`scoring`):
+  - `rennen`: Wer das Ziel (`goal`: Ordenzahl oder Spielende) zuerst erreicht, gewinnt. Die übrigen Plätze
+    ergeben sich aus der Reihenfolge.
+  - `ueberleben`: Alle spielen bis zum Ziel oder zum Totalverlust. Rangfolge nach Fortschritt, bei Gleichstand
+    nach weniger Toden.
+- Scheidet ein Team aus (alle Gruppen tot), spielen die anderen weiter.
+- **Live-Rangliste** im Overlay (eigenes Team markiert) und in der Run-Übersicht: Orden, lebende Monster, Tode.
+- Discord-Meldungen nennen Spieler und Team; der Run-Start nennt Teams, Wertung und Ziel.
+- **Bilanz:** Todes- und Versuchszähler bleiben pro Spieler; dazu Siege und Platzierungen pro Spieler und pro
+  Team-Konstellation, dauerhaft.
+
+Ziel „Spielende“ braucht das Profil-Merkmal `game_completed` (für Platin noch nicht ermittelt); bis dahin als
+Ziel eine Ordenzahl wählen.
 
 ## Regeln
 

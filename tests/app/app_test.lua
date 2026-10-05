@@ -519,3 +519,33 @@ T.test("Endbildschirm mit Statistik im Overlay", function()
   T.ok(text:find("Tode: Anna 1"), text)
   T.ok(text:find("neuer Versuch"), text)
 end)
+
+T.test("Live-Rangliste im Overlay bei mehreren Teams, eigenes Team markiert", function()
+  local app, emu, mem = make_app()
+  local H = require("core.helpers")
+  local s = H.run(2, { teams = { { "anna" }, { "ben" } } })
+  H.catch_all(s, H.AREA1, "a")
+  s:ok("status", "ben", { badges = 1 })
+  deliver(app, mem, { { op = "welcome", player = "anna", last_seq = 0 }, { op = "state", state = s.state } })
+  app:tick()
+  local found, mine = false, false
+  for _, l in ipairs(app:lines()) do
+    if l.text:find("Rangliste %(Rennen%)") then found = true end
+    if l.text:find("^>2%. Anna: 0 Orden, 1 lebend, 0 Tode$") then mine = true end
+  end
+  T.ok(found)
+  T.ok(mine)
+end)
+
+T.test("Lobby zeigt Teams und Hinweis bei ungleicher Größe", function()
+  local app, emu, mem = make_app()
+  local H = require("core.helpers")
+  local s = H.run(3, { start = false, teams = { { "anna", "ben" }, { "cem" } } })
+  deliver(app, mem, { { op = "welcome", player = "anna", last_seq = 0 }, { op = "state", state = s.state } })
+  app:tick()
+  local text = {}
+  for _, l in ipairs(app:lines()) do text[#text + 1] = l.text end
+  local all = table.concat(text, "\n")
+  T.ok(all:find("Teams: Anna & Ben vs%. Cem"), all)
+  T.ok(all:find("ungleich groß"), all)
+end)

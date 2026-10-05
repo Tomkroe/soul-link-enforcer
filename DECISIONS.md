@@ -233,3 +233,13 @@ und Automatiken gehören nicht zu den Regelvorlagen.
 Die Run-Statistik (`core.export.summary`) wird einmal berechnet und von Endbildschirm, Discord-Meldung und
 Run-Übersicht genutzt. Bei nur einem Team gibt es genau eine Run-Ende-Meldung (mit Statistik). Bei mehreren
 Teams kommen zusätzlich Ausscheiden und Ziel-Erreichen je Team.
+
+## E25 – Wettkampf: Teamgrößen und Wertungen (05.10.2026)
+
+- **Teamgrößen:** Im Wettkampf (mehr als ein Team) hat ein Team 1 oder 2 Spieler, wie im Startscript (Solo oder
+  Soul Link). Ein Team aus 3 oder 4 Spielern ist nur als gemeinsamer Soul Link ohne Gegner erlaubt.
+- **Rennen:** Teams mit erreichtem Ziel stehen nach Reihenfolge vorn, danach aktive vor ausgeschiedenen, jeweils
+  nach Fortschritt (Ø Orden), weniger Toden und mehr lebenden Monstern. Sieger = Platz 1 mit erreichtem Ziel.
+- **Überleben:** Ziel erreicht zählt als höchster Fortschritt, sonst Ø Orden; bei Gleichstand weniger Tode. Die
+  Reihenfolge des Erreichens zählt nicht. Sieger = Platz 1, auch wenn alle ausgeschieden sind.
+- „Lebende Monster“ in der Rangliste sind lebende Gruppenmitglieder (freie Schillernde zählen nicht).

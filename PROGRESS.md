@@ -91,8 +91,17 @@ Dazu der Hinweis zu Kampfbeginn, ob eine wilde Begegnung zählt. Die Bewertung s
 - **Endbildschirm im Overlay** (Regel 3.8): Statistik aus `core.export.summary`, dieselbe wie bei Discord und
   in der Übersicht.
 
-**Phase 8:** fertig im Code. Teams aus `config.lua`, Rangliste, Ausscheiden, Platzierungen, dauerhafte Bilanz pro
-Spieler und Team-Konstellation, Hinweis bei ungleichen Teams.
+**Phase 8:** fertig im Code. Im Einzelnen:
+- **Teams:** aus `config.lua`, im Wettkampf 1 oder 2 Spieler je Team; Hinweis bei ungleicher Größe (Lobby,
+  Overlay, Discord).
+- **Wertung:** Rennen (Reihenfolge des Ziel-Erreichens) und Überleben (Fortschritt, dann weniger Tode); Gewinner je
+  Wertung.
+- **Spielablauf:** Ausscheiden ohne Run-Ende, Aufhol-Modus nur im Team.
+- **Live-Rangliste:** im Overlay und in der Übersicht, mit Orden, lebenden Monstern und Toden.
+- **Discord:** Run-Start mit Teams, Wertung und Ziel.
+- **Bilanz:** dauerhaft pro Spieler und Konstellation.
+
+Offen: Profil-Merkmal `game_completed` für das Ziel „Spielende“.
 
 **Ideen für später** (nicht gebaut, laut Vorgabe): Erfolge, Kampfstatistik pro Monster, Tipprunde,
 Handicap-Ereignisse, Zeitleiste, Protokoll von Regelverstößen. Das Verstoß-Protokoll steht schon im Verlauf
@@ -100,6 +109,8 @@ Handicap-Ereignisse, Zeitleiste, Protokoll von Regelverstößen. Das Verstoß-Pr
 
 ## Verlauf
 
+- 05.10.2026 (9): Phase 8 abgeschlossen: Wertung Überleben, Teamgrößen im Wettkampf, Live-Rangliste im
+  Overlay (lebende Monster), Run-Start nennt Teams, Lobby-Hinweis, Spielende-Merkmal im Leser.
 - 05.10.2026 (8): Phase 7 abgeschlossen: vollständige Vorlagen, Run-Statistik (Endbildschirm, Discord,
   Übersicht), Discord-Wiederholung bei 429, Übersicht mit aktuellen Teams und Orden-Fortschritt.
 - 05.10.2026 (7): Phase 6 abgeschlossen: dauerhaftes Todesprotokoll über alle Versuche (+ Export, Übersicht),

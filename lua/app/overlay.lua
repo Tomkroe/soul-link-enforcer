@@ -100,6 +100,17 @@ function Overlay.lines(ctx)
   if not state then return out end
   if state.phase == "lobby" then
     add("Lobby " .. state.code .. ": " .. num(#state.order) .. " Spieler – warte auf Run-Start", "grau")
+    if #state.team_plan > 1 then
+      local parts, unequal = {}, false
+      for _, members in ipairs(state.team_plan) do
+        local names = {}
+        for _, q in ipairs(members) do names[#names + 1] = M.player_name(state, q) end
+        parts[#parts + 1] = table.concat(names, " & ")
+        if #members ~= #state.team_plan[1] then unequal = true end
+      end
+      add("Teams: " .. table.concat(parts, " vs. "), "weiss")
+      if unequal then add("Hinweis: Teams ungleich groß – ungleich belastet.", "gelb") end
+    end
     return out
   end
   if state.phase == "finished" then
@@ -114,6 +125,7 @@ function Overlay.lines(ctx)
   local me = state.players[pid]
   if not me then return out end
   for _, l in ipairs(Overlay.catchup(state, pid, ctx.area_key, ctx.now_server)) do out[#out + 1] = l end
+  for _, l in ipairs(Overlay.ranking(state, pid)) do out[#out + 1] = l end
   if ctx.level_cap then add("Level-Cap: " .. (type(ctx.level_cap) == "number" and num(ctx.level_cap) or ctx.level_cap)) end
 
   for _, r in ipairs(ctx.lock_reasons or {}) do add(r, "rot") end
@@ -145,6 +157,27 @@ function Overlay.lines(ctx)
         .. (s and s.dragged and s.dragged > 0 and ("+" .. num(s.dragged)) or "")
     end
     add("Tode: " .. table.concat(parts, "  "))
+  end
+  return out
+end
+
+--- Live-Rangliste (nur bei mehreren Teams): Orden, lebende Monster, Tode; eigenes Team hervorgehoben.
+function Overlay.ranking(state, pid)
+  local out = {}
+  if #state.team_order <= 1 then return out end
+  local mine = state.players[pid] and state.players[pid].team
+  local label = state.settings.scoring == "ueberleben" and "Überleben" or "Rennen"
+  out[#out + 1] = { text = "Rangliste (" .. label .. ")", color = "weiss" }
+  for _, r in ipairs(R.ranking(state)) do
+    local status = r.status == "fertig" and " – Ziel!" or (r.status == "verloren" and " – raus" or "")
+    -- Kurzname (nur Spieler), damit die Zeile in die DS-Breite passt
+    local names = {}
+    for _, q in ipairs(state.teams[r.team].members) do names[#names + 1] = M.player_name(state, q) end
+    local text = string.format("%s%d. %s: %s Orden, %s lebend, %s Tode%s", r.team == mine and ">" or " ", r.rank,
+      table.concat(names, "&"), num(r.progress), num(r.alive), num(r.deaths), status)
+    for _, l in ipairs(Overlay.wrap(text)) do
+      out[#out + 1] = { text = l, color = r.team == mine and "gelb" or (r.status == "verloren" and "grau" or "weiss") }
+    end
   end
   return out
 end

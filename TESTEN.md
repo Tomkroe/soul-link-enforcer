@@ -155,6 +155,16 @@ Vorbereitung: `backups.save_path` setzen, `write_enabled = true`, nur `party` au
 - [ ] Run verlieren → Overlay „RUN BEENDET: VERLOREN“ mit Statistik, Übersicht zeigt die Statistik-Karte.
 - [ ] Übersicht über GitHub Pages (`?server=wss://…/ws&lobby=…`) zeigt live dieselben Daten.
 
+## 8. Wettkampf (zwei Instanzen oder PCs)
+
+- [ ] 1v1 mit `teams = { { "A" }, { "B" } }`, Ziel 1 Orden, Wertung Rennen: Overlay zeigt „Rangliste (Rennen)“,
+      eigenes Team mit „>“. Wer zuerst den Orden holt, ist Platz 1; Discord „hat das Ziel erreicht (Platz 1)“.
+- [ ] Ein Team verliert alle Gruppen → „scheidet aus“, das andere spielt weiter; Run-Ende erst, wenn keins mehr aktiv ist.
+- [ ] Tod im einen Team reißt im anderen nichts mit; Aufhol-Modus nur, wenn der eigene Partner offline ist.
+- [ ] Wertung Überleben: Rangfolge nach Orden, bei Gleichstand weniger Tode.
+- [ ] Bilanz in der Übersicht: Siege/Platzierungen pro Spieler und für die Konstellation.
+- [ ] Spielende-Merkmal (`game_completed`) finden, falls das Ziel „Spielende“ genutzt werden soll.
+
 ## 5. Randomizer (erst nach Abschnitt 3)
 
 - [ ] `config.lua`: `rom_path` auf die eigene Platin-ROM setzen. `check.lua`: „ROM gelesen“ mit Game-Code CPUD

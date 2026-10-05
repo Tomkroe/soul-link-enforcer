@@ -217,6 +217,12 @@ function Reader:snapshot(t, read_box)
   if balls then snap.has_balls = balls ~= 0 end
   snap.battle_items = self:pocket_total({ "bag_medicine", "bag_battle" })
   snap.battle = self:read_battle()
+  -- Spielende erreicht (Ziel "spielende" im Wettkampf/Soul Link): Merkmal aus dem Profil, z. B. Ruhmeshalle
+  local gc = self:entry("game_completed")
+  if gc then
+    local v = self:read("game_completed", gc.width or 8)
+    if v ~= nil then snap.completed = (gc.equals ~= nil and v == gc.equals) or (gc.equals == nil and v ~= 0) end
+  end
   return snap
 end
 

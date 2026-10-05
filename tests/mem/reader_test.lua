@@ -171,3 +171,14 @@ T.test("Kampfkopie: tote Monster im Kampf auf 0 KP, nur mit battle_safe", functi
   T.eq(P.parse(P.decrypt(emu.read_bytes(battle, 236)), 4).hp, 20, "anderes Monster unverändert")
   T.eq(r:set_hp_battle(uid2, 0), nil, "schon 0")
 end)
+
+T.test("Spielende-Merkmal aus dem Profil", function()
+  local emu = Emu.fake()
+  local _, party = us_layout(emu)
+  local profile = copy(Profiles.load("CPUD"))
+  profile.addresses.game_completed = { rel = "party", offset = -0x100, width = 8, tested = false }
+  local r = Reader.new({ profile = profile, emu = emu })
+  T.eq(r:snapshot(0).completed, false)
+  emu.write8(party - 0x100, 1)
+  T.eq(r:snapshot(0).completed, true)
+end)

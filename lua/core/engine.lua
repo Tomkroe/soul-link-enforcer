@@ -208,7 +208,7 @@ function Ctx:archive_attempt()
     local team = state.teams[row.team]
     teams[#teams + 1] = U.map({
       team = row.team, members = U.list(U.copy(team.members)), place = row.rank, status = team.status,
-      won = team.status == "fertig" and row.rank == 1,
+      won = R.is_winner(state, row),
     })
   end
   self:emit({ type = "result", attempt = state.attempt, result = state.result, teams = teams })
@@ -270,6 +270,9 @@ local function validate_team_plan(state, plan)
   local seen = {}
   for _, members in ipairs(plan) do
     if #members < 1 or #members > MAX_PLAYERS then return false, "Teams müssen 1 bis 4 Spieler haben." end
+    if #plan > 1 and #members > 2 then
+      return false, "Im Wettkampf hat ein Team 1 Spieler (Solo) oder 2 Spieler (Soul Link)."
+    end
     for _, pid in ipairs(members) do
       if not state.players[pid] then return false, "Unbekannter Spieler im Team: " .. tostring(pid) end
       if seen[pid] then return false, "Spieler doppelt eingeteilt: " .. tostring(pid) end
@@ -349,6 +352,13 @@ function handlers.start_run(ctx, ev)
   end
   local text = "Run gestartet: Versuch " .. U.num(state.attempt) .. " mit " .. U.num(#state.order)
     .. " Spieler(n), Vorlage " .. (Settings.preset_names[state.settings.preset] or state.settings.preset) .. "."
+  if #state.team_order > 1 then
+    local names = {}
+    for _, tid in ipairs(state.team_order) do names[#names + 1] = state.teams[tid].name end
+    local goal = state.settings.goal
+    text = text .. " Wettkampf (" .. (state.settings.scoring == "ueberleben" and "Überleben" or "Rennen") .. ", Ziel: "
+      .. (goal.kind == "orden" and (U.num(goal.value) .. " Orden") or "Spielende") .. "): " .. table.concat(names, " vs. ")
+  end
   ctx:log("run_start", text)
   ctx:notify(text)
   ctx:discord("run_start", text)

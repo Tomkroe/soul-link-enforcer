@@ -31,6 +31,8 @@ return {
     battle_flag = { ptr = 0x00000000, offset = 0x0, tested = false },
     battle_type = { ptr = 0x00000000, offset = 0x0, tested = false },
     battle_enemy = { ptr = 0x00000000, offset = 0x0, tested = false },
+    -- Spielende erreicht (für das Ziel "spielende"), z. B. Ruhmeshallen-Merkmal; equals = Wert bei "erreicht"
+    game_completed = { ptr = 0x00000000, offset = 0x0, width = 8, tested = false },
     -- Spieldaten im ROM-Abbild (Artnamen, Typen, Entwicklungen, Gebietsnamen) – zur Laufzeit lesen
     species_names = { ptr = 0x00000000, offset = 0x0, tested = false },
     area_names    = { ptr = 0x00000000, offset = 0x0, tested = false },

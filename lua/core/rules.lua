@@ -291,26 +291,48 @@ local function team_alive_groups(team)
   return n
 end
 
---- Live-Rangliste aller Teams (Phase 8). Rennen: Ziel-Reihenfolge zuerst; danach Fortschritt,
--- lebende Gruppen und weniger Tode. Ausgeschiedene Teams stehen hinter aktiven.
+-- Lebende Monster eines Teams (Gruppenmitglieder, die leben).
+local function team_alive_mons(state, team)
+  local n = 0
+  for _, gid in ipairs(team.group_order) do
+    for pid, uid in pairs(team.groups[gid].members) do
+      local mon = state.players[pid].mons[uid]
+      if mon and mon.status == "lebt" then n = n + 1 end
+    end
+  end
+  return n
+end
+
+--- Live-Rangliste aller Teams (Phase 8), je nach Wertung (settings.scoring):
+--   rennen      Wer das Ziel zuerst erreicht, liegt vorn (Reihenfolge des Erreichens). Danach aktive Teams vor
+--               ausgeschiedenen, jeweils nach Fortschritt, weniger Toden, mehr lebenden Monstern.
+--   ueberleben  Rangfolge nach Fortschritt (Ziel erreicht = höchster Fortschritt), bei Gleichstand weniger Tode;
+--               die Reihenfolge des Erreichens zählt nicht.
+-- Zeile: { rank, team, name, status, place, progress, goal, alive, alive_groups, deaths }
 function R.ranking(state)
   local rows = {}
   for _, tid in ipairs(state.team_order) do
     local team = state.teams[tid]
     rows[#rows + 1] = {
       team = tid, name = team.name, status = team.status, place = team.place,
-      progress = team_progress(state, team), alive = team_alive_groups(team), deaths = team.deaths,
+      progress = team_progress(state, team), goal = team.status == "fertig",
+      alive = team_alive_mons(state, team), alive_groups = team_alive_groups(team), deaths = team.deaths,
     }
   end
+  local survival = state.settings.scoring == "ueberleben"
   local function rank_status(r)
     if r.status == "fertig" then return 0 end
     if r.status == "aktiv" then return 1 end
     return 2
   end
   table.sort(rows, function(a, b)
-    local sa, sb = rank_status(a), rank_status(b)
-    if sa ~= sb then return sa < sb end
-    if sa == 0 and a.place ~= b.place then return a.place < b.place end
+    if survival then
+      if a.goal ~= b.goal then return a.goal end
+    else
+      local sa, sb = rank_status(a), rank_status(b)
+      if sa ~= sb then return sa < sb end
+      if sa == 0 and a.place ~= b.place then return a.place < b.place end
+    end
     if a.progress ~= b.progress then return a.progress > b.progress end
     if a.deaths ~= b.deaths then return a.deaths < b.deaths end
     if a.alive ~= b.alive then return a.alive > b.alive end
@@ -318,6 +340,14 @@ function R.ranking(state)
   end)
   for i, r in ipairs(rows) do r.rank = i end
   return rows
+end
+
+--- Gewinner-Regel für die Bilanz: Rennen = Platz 1 mit erreichtem Ziel; Überleben = Platz 1 (bei mehreren
+-- Teams); Soul Link mit einem Team = Ziel erreicht.
+function R.is_winner(state, row)
+  if #state.team_order <= 1 then return row.goal end
+  if state.settings.scoring == "ueberleben" then return row.rank == 1 end
+  return row.rank == 1 and row.goal
 end
 
 return R
