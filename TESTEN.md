@@ -107,6 +107,35 @@ Vorbereitung: `backups.save_path` setzen, `write_enabled = true`, nur `party` au
 - [ ] Emulator neu starten → derselbe Zustand (Tote bleiben tot), `local/solo_<name>.json` vorhanden.
 - [ ] Nach verlorenem Run: Taste N → neuer Versuch, Versuchszähler +1.
 
+## Spieldaten aus der ROM (mit `rom_path`)
+
+- [ ] `check.lua`: Zeile „Spieldaten“ zeigt für 1, 4, 7, 25, 387, 390, 393 die deutschen Namen mit Typen
+      (z. B. 25 = Pikachu/Elektro, 387 = Chelast/Pflanze). Falsche Namen → Textbank-Nummer `texts.species` im
+      Profil anpassen. Falsche Typnamen → `texts.types`.
+- [ ] „Entwicklungsreihe“: Art 3 gehört zu Reihe 1.
+- [ ] Umlaute in Namen korrekt (z. B. Art 116 Seemops, Art 44 Duflor – je nach Bank), sonst Zeichentabelle prüfen.
+- [ ] Spitzname eines Monsters mit Umlaut wird im Overlay richtig angezeigt.
+
+## Weitere Adressen mit `check.lua`
+
+- [ ] „Spielzeit-Kandidat: Team -0x… = h:mm:ss“ erscheint nach einigen Sekunden und stimmt mit der Spielzeit im
+      Trainerpass überein → als `play_time = { rel = "party", offset = -0x…, tested = false }` ins Profil.
+- [ ] Spielername: Im Memory Viewer bei Team −0x38 steht der Name (Gen-4-Zeichen). Stimmt das, `trainer_name` testen.
+
+## 3b. Level-Cap, Sonderbonbons, Folgemodus, Items im Kampf (nach Abschnitt 3)
+
+- [ ] Level-Cap (`level_cap = true`, Spieldaten geladen): Monster am Cap-Level sammelt keine Erfahrung mehr über das
+      Level hinaus (Erfahrung wird nach dem Kampf gedeckelt). Overlay „über dem Level-Cap“, wenn eines darüber ist.
+      Notieren, ob ein Monster am Cap im Kampf trotzdem aufsteigt (dann Schreiben im Kampf nötig).
+- [ ] Sonderbonbons (`rare_candies = true`, `bag_items` getestet): 999 Sonderbonbons in der Item-Tasche,
+      nach Benutzung wieder 999.
+- [ ] Folgemodus: Adresse der Optionen und Bit für den Kampfstil finden (Optionen umstellen, Memory Viewer),
+      als `options = { ..., battle_style_bit = n, follow_value = 0|1 }` eintragen. Danach bleibt „Folgen“ eingestellt.
+- [ ] Items im Kampf (`battle_items = { mode = "verboten" }`): Trank im Kampf benutzen → nach dem Kampf
+      Meldung „Regelverstoß … Item(s) benutzt“ und Eintrag im Verlauf. Außerhalb des Kampfes: keine Meldung.
+- [ ] Todesprotokoll: `local/todesprotokoll.txt` und `http://localhost:8080/api/SOUL01/todesprotokoll.txt`
+      zeigen jeden Tod mit Gebiet, Level, Gegner.
+
 ## 5. Randomizer (erst nach Abschnitt 3)
 
 - [ ] `config.lua`: `rom_path` auf die eigene Platin-ROM setzen. `check.lua`: „ROM gelesen“ mit Game-Code CPUD

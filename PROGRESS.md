@@ -31,6 +31,8 @@ lässt. Phase 0 und alles mit Speicheradressen ist übersprungen, die Schnittste
 | `lua/profiles` | Laden nach Game-Code, Prüfung der `tested`-Markierungen, Vorlage, Liste der deutschen Editionen; **Platin (CPUD)**: Kandidaten aus Ironmon-Tracker und yPokeStats (US/PAL), Werte relativ zum Team, Arena-Level – alles ungetestet | `tests/mem/reader_test.lua` |
 | Adress-Suche | Team per Signatur im ganzen Speicher finden (unabhängig von Sprachversion/Zeigern), Zeigerketten, Suche nach Zeigern auf die Team-Basis, Live-Anzeige und Bericht in `check.lua` | `tests/mem/finder_test.lua` |
 | `web/` | Run-Übersicht: Spieler, Online-Status, Orden, Gruppen, Gebiete, Friedhof/Todesprotokoll, Regeln, Verlauf, frühere Versuche, Rangliste; live; nur Text; im Browser geprüft (Desktop/Mobil) | Server-Test für Auslieferung |
+| Spieldaten | aus der eigenen ROM: NDS-Dateisystem, NARC, Gen-4-Texte (Entschlüsselung, Zeichensatz), Personal-Daten (Typen, Wachstum), Entwicklungsreihen; Erfahrungskurven | `tests/mem/gamedata_test.lua` mit synthetischer ROM |
+| Zusatzregeln | Level-Cap durchsetzen, Sonderbonbons, Folgemodus, Items im Kampf, Todesprotokoll-Export, Bilanz | `tests/core`, `tests/mem`, `tests/app`, Server-Test |
 | Doku | README (alle geforderten Abschnitte), DECISIONS.md, TESTEN.md | – |
 
 Abnahmekriterien, die schon automatisch belegt sind: Tests für core und mem grün ohne Emulator (1–4 Spieler,
@@ -40,56 +42,51 @@ Todeszähler und Protokoll überstehen einen Server-Neustart (`server/test`).
 
 ## Offen (nach Phasen)
 
+Alles Folgende braucht den Emulator, also Adressen bestätigen und Verhalten prüfen. Im Code ist es gebaut, soweit
+unten nicht anders genannt.
+
 **Phase 0 – Machbarkeit** (heute Abend, siehe oben): `check.lua` ausführen, Entscheidung E3 bestätigen.
 
-**Phase 1 – Lesen:**
-- Platin-Profil im Emulator bestätigen bzw. deutsche Adressen eintragen (Bericht aus `check.lua`).
-  Ohne Quelle sind bisher: Spielzeit (Savestate-Erkennung läuft bis dahin nur über die Orden), Boxen,
-  Spieldaten-Tabellen.
-- Spieldaten zur Laufzeit lesen: Artnamen, Typen, Entwicklungsreihen (für Duplikat-Klausel), Gebietsnamen,
-  Item-Kategorien. Dafür fehlt noch ein Leser für die Datenarchive (NARC) im ROM-Abbild bzw. die
-  Tabellen im Arbeitsspeicher. Bis dahin: Art als Nummer, Gebiet als „Gebiet <Nr>“.
-- Gen-4-Zeichentabelle für Spitznamen (bisher nur Buchstaben/Ziffern).
-- Kampfergebnis und Gegnerdaten aus dem Kampfspeicher (für sofortige Entscheidung „verpasst“).
-- „Im Menü/PC“ erkennen (für die Menü-Sperre).
+**Phase 1 – Lesen:** Platin-Profil bestätigen (Bericht `local/adressen_CPUD.txt`). Spieldaten aus der ROM sind
+gebaut (Namen, Typen, Wachstum, Entwicklungsreihen); Pfade, Textbank-Nummern und Zeichentabelle sind zu prüfen.
+Spielzeit-Kandidat liefert `check.lua`. **Noch nicht gebaut:** Gebietsnamen (Zuordnung Karte → Ortsname liegt
+nicht in einem einfachen Archiv), Boxen lesen (keine Quelle; Fänge bei vollem Team werden bis dahin nicht
+erkannt), Kampfergebnis (Entscheidung „verpasst“ läuft über 20 s Wartezeit), „im Menü/PC“ erkennen.
 
-**Phase 2 – Verbindung und Zustand:** fertig bis auf die Prüfung im Emulator (TESTEN.md Abschnitt 2).
-Bedienoberfläche für Teams (Wettkampf) und für Vorschläge während des Runs fehlt noch. Die Engine kann es,
-im Script gibt es bisher nur Run-Start (N) und Abstimmen (Y/U).
+**Phase 2:** fertig, Prüfung im Emulator (TESTEN.md Abschnitt 2).
 
-**Phase 3 – Regeln erzwingen:** Regeln 3, 4, 5 sind in Engine und Script umgesetzt (KP auf 0, Sperren) und
-warten auf Profil-Adressen und die Prüfung in TESTEN.md Abschnitt 3. Regel 6 (Level-Cap): Abfrage fertig, das
-Deckeln der Erfahrung braucht die Wachstumskurven aus den Spieldaten. Regel 7 (Sonderbonbons) offen.
-Unklar bis zum Test: Wie unterdrückt `joypad.set` in DeSmuME Tasten?
+**Phase 3:** Regeln 3–8 im Code fertig: KP auf 0, Sperren, Team-Gleichheit, Level-Cap (Erfahrung deckeln,
+Überschreitung melden), Sonderbonbons nachfüllen. Prüfung: TESTEN.md Abschnitte 3 und 3b. Unklar bis zum
+Test: Wie unterdrückt `joypad.set` in DeSmuME Tasten? Steigt ein Monster am Cap im Kampf trotzdem auf?
 
-**Phase 4:** fertig im Code, Test im Emulator offen. Umfang: Sicherungen, Todeszähler (Server und lokal,
-auch ohne Verbindung angezeigt), Overlay mit Aufhol-Kasten, Gruppen-, Friedhof- und Gebiets-Ansicht,
-Partner-Anzeige, Prolog überspringen (Abspieler mit Schnellvorlauf, Ende am Spielzustand, Name aus
-config.lua, Aufnahme-Funktion für die Eingabefolge) und Spitznamen-Abfrage ablehnen.
-Für Platin fehlen im Profil noch: Eingabefolge (per Aufnahme), Merkmal „kann frei laufen“, Adresse des
-Spielernamens, Merkmal „Spitznamen-Abfrage offen“. Bis dahin sind die Automatiken aus und das Overlay sagt das.
-Export des Todesprotokolls als Textdatei gehört zu Phase 6 und ist offen.
+**Phase 4:** fertig im Code (Sicherungen, Todeszähler, Overlay, Aufhol-Kasten, Gruppen-Ansicht, Prolog
+überspringen mit Aufnahme, Spitznamen ablehnen). Für Platin fehlen im Profil: Prolog-Eingabefolge (Aufnahme),
+Merkmal „kann frei laufen“, Merkmal „Spitznamen-Abfrage offen“. Den Spielernamen gibt es als Kandidat.
 
-**Solo-Modus:** fertig. `mode = "solo"` in config.lua: lokale Regel-Engine im Script, ohne Server und Brücke,
-Zustand und Zähler in `local/`, Run startet automatisch. Alternativ allein über den Server (mit Übersicht
-und Discord).
+**Solo-Modus:** fertig.
 
-**Phase 5 – Randomizer:** Stufe A im Code fertig und automatisch getestet: deterministischer Zufall (gleiche Werte
-unter Lua 5.1 und fengari, Referenzwerte im Test), Zuordnung pro Gebiet, Modi alle/edition, Artenliste aus den
-Begegnungsdaten der eigenen ROM (NDS-Dateisystem und NARC-Leser), Suche der geladenen Tabelle per Abgleich mit
-den ROM-Dateien, Schreiben nur über den Schreibschutz und außerhalb von Kämpfen, Seed-Vergabe beim Run-Start,
-Fingerabdruck-Abgleich zwischen Spielern. Stufen B und C: Zuordnungen und Item-Ausschlüsse fertig, Schreibzugriffe
-gesperrt bis Stufe A bzw. B stabil getestet sind (laut Vorgabe). Für Platin ungeprüft: NARC-Pfad und
-Tabellenformat. Test im Emulator: TESTEN.md Abschnitt 5 (nach Abschnitt 3).
-**Phase 6:** Klauseln 1–3 und 4 (Geschenke) in der Engine fertig. Folgemodus, Items im Kampf und
-Textexport offen.
-**Phase 7:** Vorlagen (eingebaut + speichern), Discord und Run-Übersicht fertig. Offen: Vorlage laden aus
-dem Script, Bedienung in der Lobby.
-**Phase 8:** Teams, Rangliste, Ausscheiden, Platzierungen und Siege in der Statistik fertig in der Engine.
-Offen: Team-Einteilung bedienen, Bilanz pro Team-Konstellation.
+**Phase 5 – Randomizer:** Stufe A fertig. Stufen B und C: Zuordnungen fertig, Schreibzugriffe laut Vorgabe erst
+nach stabil getesteter Stufe A bzw. B.
+
+**Phase 6:** fertig im Code. Duplikat-Klausel mit Entwicklungsreihen aus der ROM, Schillernd-Klausel,
+Schonfrist, Geschenke, Folgemodus (Optionen-Adresse fehlt im Profil), Todesprotokoll mit Textexport (Server und
+lokal), Versuchszähler, Items im Kampf (erkennen und protokollieren).
+
+**Phase 7:** fertig im Code. Vorlagen eingebaut, eigene speichern und laden (Server und Solo), Discord,
+Run-Übersicht mit Bilanz.
+
+**Phase 8:** fertig im Code. Teams aus `config.lua`, Rangliste, Ausscheiden, Platzierungen, dauerhafte Bilanz pro
+Spieler und Team-Konstellation, Hinweis bei ungleichen Teams.
+
+**Ideen für später** (nicht gebaut, laut Vorgabe): Erfolge, Kampfstatistik pro Monster, Tipprunde,
+Handicap-Ereignisse, Zeitleiste, Protokoll von Regelverstößen. Das Verstoß-Protokoll steht schon im Verlauf
+(`kind = "violation"`) und lässt sich später auswerten.
 
 ## Verlauf
 
+- 05.10.2026 (5): Todesprotokoll-Export, Bilanz (Siege, Platzierungen, Konstellationen), Vorlagen/Teams aus
+  config.lua, Items im Kampf, Spieldaten aus der ROM, Level-Cap durchsetzen, Sonderbonbons, Folgemodus,
+  Gen-4-Zeichensatz, Spielername-Kandidat, Spielzeit-Suche.
 - 05.10.2026 (4): Phase 5 Randomizer Stufe A, Zuordnungen für B/C, ROM-Leser, Fingerabdruck-Abgleich.
 - 05.10.2026 (3): Aufhol-Modus-Overlay (Kasten mit Grenze, Fang hier, freie Gebiete, „offline seit“),
   Phase 4 (Gruppen-Ansicht, Automatiken Prolog/Spitzname, Eingabe-Aufnahme, lokale Todeszähler),

@@ -270,8 +270,18 @@ Umgesetzt in `lua/core` (getestet für 1, 2, 3 und 4 Spieler pro Gruppe):
 5. **Team-Gleichheit:** Alle Teams müssen aus denselben Gruppen bestehen. Bei Abweichung zeigt das
    Overlay, was fehlt oder zu viel ist, und sperrt. Monster offener Gruppen (Partner hat noch nicht
    gefangen) sind erlaubt.
-6. **Level-Cap:** höchstes Level des nächsten Arenaleiters (Arena-Level im Profil).
-7. **Alle Gruppen tot:** Run verloren, Statistik im Verlauf.
+6. **Level-Cap:** höchstes Level des nächsten Arenaleiters (Arena-Level im Profil). Das Script deckelt die
+   Erfahrung außerhalb von Kämpfen auf das Cap-Level. Die Wachstumskurve kommt aus den Spieldaten der ROM.
+   Ist ein Monster schon über dem Cap (z. B. Level-Aufstieg im Kampf oder per Sonderbonbon), meldet das
+   Overlay es. Level lassen sich nicht zurücksetzen.
+7. **Sonderbonbons:** 999 Stück in der Item-Tasche, werden nachgefüllt (außerhalb von Kämpfen).
+8. **Alle Gruppen tot:** Run verloren, Statistik im Verlauf und in der Bilanz.
+
+**Zusatzregeln (Phase 6):** Duplikat-Klausel (Entwicklungsreihen aus den Spieldaten der ROM),
+Schillernd-Klausel, Schonfrist, Geschenke als Gebietsfang, Folgemodus (Kampfstil-Bit in den Optionen, braucht
+die Adresse im Profil), Todesprotokoll mit Export und **Items im Kampf**. Bei Items im Kampf vergleicht das
+Script den Bestand an Medizin und Kampf-Items vor und nach jedem Kampf. Je nach Modus (`erlaubt` | `max` mit
+Zahl | `verboten`) wird ein Verstoß nur protokolliert und gemeldet, nicht gesperrt.
 
 **Aufhol-Modus** (ein Mitspieler der eigenen Gruppe ist offline): Trainieren ist frei. Neue Orden gibt
 es nur bis zum Ordenstand des Abwesenden. Fänge sind nur in Gebieten erlaubt, in denen er schon
@@ -285,8 +295,14 @@ Meldung. Der Server-Zustand gilt weiter, und die Regeln (z. B. tote Monster auf 
 **Einstellungen** werden in der Lobby festgelegt. Während des Runs ändern sie sich nur, wenn alle
 Spieler zustimmen. Das gilt auch für „Todeszähler zurücksetzen“ und „Run aufgeben“.
 
-**Todeszähler** (pro Spieler: Tode, mitgerissen, Versuche, Siege) liegen dauerhaft auf dem Server und
-zusätzlich lokal in `local/todeszaehler.json`. Sie überstehen Neustarts und neue Runs.
+**Todeszähler und Bilanz** (pro Spieler: Tode, mitgerissen, Versuche, Runs, Siege, Platzierungen; pro
+Team-Konstellation: Runs, Siege und Platzierungen je Team) liegen dauerhaft auf dem Server, Todeszähler
+zusätzlich lokal in `local/todeszaehler.json`. Sie überstehen Neustarts und neue Runs. Die Run-Übersicht
+zeigt die Bilanz.
+
+**Todesprotokoll als Textdatei** (für ein Stream-Overlay, z. B. OBS „Text aus Datei“ oder „Browserquelle“):
+- vom Server: `http(s)://<server>/api/<LOBBY>/todesprotokoll.txt`
+- lokal vom Script: `local/todesprotokoll.txt` (wird bei jeder Änderung neu geschrieben)
 
 ## Schalter und Vorlagen
 
@@ -303,8 +319,19 @@ zusätzlich lokal in `local/todeszaehler.json`. Sie überstehen Neustarts und ne
 Weitere Schalter: `gifts_count` (Geschenke zählen als Gebietsfang), `death_log`, `skip_prologue`,
 `skip_nickname`, `randomizer.mode` (`aus` | `alle` | `edition`), `goal` (`spielende` oder
 `orden` mit Zahl), `scoring` (`rennen` | `ueberleben`), `discord.*`.
-Eigene Vorlagen speichert der Server (`template_save`). Teile davon (Sonderbonbons, Folgemodus, Prolog,
-Randomizer) wirken erst, wenn die zugehörigen Phasen umgesetzt sind (siehe PROGRESS.md).
+**Vorlagen und Teams aus `config.lua`** (gelten beim Run-Start mit Taste `N`):
+
+```lua
+lobby_settings = {
+  preset = "hardcore",                       -- eingebaute Vorlage
+  -- template = "Unsere Regeln",             -- oder eigene, gespeicherte Vorlage
+  changes = { level_cap = false },           -- einzelne Schalter danach
+  save_as = "Unsere Regeln",                 -- Ergebnis als eigene Vorlage speichern
+  teams = { { "Tom", "Anna" }, { "Ben", "Cem" } },   -- Wettkampf 2v2 (leer = gemeinsamer Soul Link)
+},
+```
+
+Eigene Vorlagen liegen auf dem Server (im Solo-Modus in `local/vorlagen.json`).
 
 ## Discord einrichten
 
@@ -364,7 +391,12 @@ wird nur außerhalb von Kämpfen und nur, wenn `encounter_table` im Profil getes
 Lua-Version gleich (automatisch getestet). Jedes Script meldet einen Fingerabdruck davon an den Server. Weicht
 er bei einem Spieler ab (z. B. andere Edition im Modus `edition`), bekommen alle eine Warnung.
 
-**Was dafür nötig ist:** `rom_path` in `config.lua` (Pfad zu deiner eigenen ROM, wird nur gelesen). Das Script
+**Spieldaten aus der ROM:** Mit `rom_path` liest das Script beim Start Artnamen, Typen, Wachstumskurven und
+Entwicklungsreihen aus deiner ROM (Personal-, Entwicklungs- und Textarchive). Damit zeigen Overlay,
+Run-Übersicht und Todesprotokoll Namen und Typen als Text, die Duplikat-Klausel kennt die Entwicklungsreihen
+und das Level-Cap die Erfahrungskurven. Ohne `rom_path` erscheinen Arten als Nummer.
+
+**Was der Randomizer braucht:** `rom_path` in `config.lua` (Pfad zu deiner eigenen ROM, wird nur gelesen). Das Script
 liest daraus die Begegnungsdateien und findet über einen exakten Abgleich die gerade geladene Tabelle im
 Speicher. `lua/check.lua` zeigt, ob das klappt.
 

@@ -178,3 +178,31 @@ anders aufgebaut ist; das geschieht nur über den Schreibschutz und mit getestet
 - **Item-Ausschlüsse (C):** „VMs und Basis-Items“ als ganze Taschen ausgeschlossen (VM/TM-Tasche, Basis-Items-Tasche).
   Die Tasche allein trennt TM und VM nicht sicher, deshalb bleiben auch TMs unverändert. Das lässt sich lockern,
   sobald die Item-Daten aus der ROM gelesen werden.
+
+## E18 – Bilanz in Lua statt im Server (05.10.2026)
+
+Todeszähler, Versuche, Siege, Platzierungen und Team-Konstellationen schreibt `core/ledger.lua` aus den Effekten
+der Engine fort. Server (über fengari) und Solo-Modus rufen dieselbe Funktion auf. Damit gibt es die
+Zählregeln nur einmal. Der Server speichert die Bilanz unter `ledger`; ein älterer Stand unter `stats` wird
+übernommen. Platzierung = Rang aus `rules.ranking` beim Run-Ende, Sieg = Platz 1 mit erreichtem Ziel.
+
+## E19 – Level-Cap: Erfahrung deckeln, nicht Level senken (05.10.2026)
+
+Das Script setzt außerhalb von Kämpfen die Erfahrung auf das Minimum des Cap-Levels zurück, wenn sie darüber
+liegt. Level-Aufstiege im Kampf oder per Sonderbonbon lassen sich so nicht verhindern, nur melden. Echtes
+Verhindern bräuchte Schreiben im Kampf (`battle_safe`) und wird nach dem Emulator-Test entschieden.
+Erfahrungskurven sind die sechs bekannten Formeln; welche Kurve eine Art hat, kommt aus den Personal-Daten der ROM.
+
+## E20 – Items im Kampf über den Beutelbestand (05.10.2026)
+
+Ohne Adresse für „Item benutzt“ vergleicht das Script die Summe aus Medizin- und Kampf-Tasche vor und nach jedem
+Kampf. Was außerhalb von Kämpfen benutzt wird, zählt nicht. Bewertung (erlaubt / max. N / verboten) und
+Protokoll macht die Engine; gesperrt wird laut Vorgabe nichts.
+
+## E21 – Spieldaten und Texte aus der ROM, Zeichentabelle zentral (05.10.2026)
+
+Typen, Wachstumskurven und Entwicklungsreihen kommen aus den Archiven der ROM, Namen aus den Textbanken
+(Gen-4-Verschlüsselung laut Decompilation). Textbank-Nummern und Pfade stehen im Profil und sind ungeprüft;
+`check.lua` zeigt Stichproben. Die Zeichentabelle (`mem/charset.lua`) nutzen Spitznamen, Spieltexte und die
+Namenskodierung gemeinsam. Gebietsnamen fehlen noch: Die Zuordnung Karte → Ortsname liegt im Programmcode des
+Spiels und nicht in einem Archiv.
