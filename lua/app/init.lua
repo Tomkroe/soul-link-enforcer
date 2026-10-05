@@ -382,6 +382,13 @@ function App:export_deathlog()
     self.last_export = text
     self.fs.write_atomic(self.local_dir .. "/todesprotokoll.txt", text)
   end
+  if self.client.ledger then
+    local ok2, all = pcall(Export.deathlog_all, self.client.ledger)
+    if ok2 and all ~= self.last_export_all then
+      self.last_export_all = all
+      self.fs.write_atomic(self.local_dir .. "/todesprotokoll_alle.txt", all)
+    end
+  end
 end
 
 --- Älteste offene Abstimmung, bei der man selbst noch nicht zugestimmt hat.
@@ -439,6 +446,17 @@ function App:tick()
   if self.rando and snap and state and state.phase == "running" then
     local ok, err = pcall(self.rando.tick, self.rando, state.settings, snap)
     if not ok then self:note("Randomizer-Fehler: " .. tostring(err), "warn") end
+  end
+
+  -- Hinweis zu Beginn eines wilden Kampfes: zählt die Begegnung? (Regel aus core.rules, Phase 6)
+  if snap and snap.battle and snap.battle.wild and not self.battle_noted and state and pid and snap.area then
+    self.battle_noted = true
+    local st = R.encounter_status(state, pid, snap.area.key, snap.battle.opponent)
+    if st.kind ~= "kein_run" and st.kind ~= "genutzt" and st.kind ~= "verbraucht" then
+      self:note(st.text, st.counts and "warn" or "info")
+    end
+  elseif snap and not snap.battle then
+    self.battle_noted = false
   end
 
   local ok_x, err_x = pcall(self.enforce_extras, self, state, snap)

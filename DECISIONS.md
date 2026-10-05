@@ -206,3 +206,19 @@ Typen, Wachstumskurven und Entwicklungsreihen kommen aus den Archiven der ROM, N
 `check.lua` zeigt Stichproben. Die Zeichentabelle (`mem/charset.lua`) nutzen Spitznamen, Spieltexte und die
 Namenskodierung gemeinsam. Gebietsnamen fehlen noch: Die Zuordnung Karte → Ortsname liegt im Programmcode des
 Spiels und nicht in einem Archiv.
+
+## E22 – Todesprotokoll dauerhaft in der Bilanz (05.10.2026)
+
+Der Friedhof gehört zum Run-Zustand und beginnt mit jedem Versuch neu. Die Vorgabe verlangt ein Protokoll, das
+„dauerhaft wie der Todeszähler“ ist. Deshalb erzeugt die Engine pro Tod zusätzlich ein Ereignis `death`, und
+`core/ledger.lua` hängt es mit Versuchsnummer und Lobby an die dauerhafte Bilanz an (höchstens 2000 Einträge).
+Mit `death_log = false` entsteht kein dauerhafter Eintrag; der Friedhof im Run bleibt, weil die Regeln ihn
+brauchen. Zeitstempel im Text sind UTC mit Datum und werden ohne Datumsbibliothek berechnet, damit Server und
+Script gleich formatieren.
+
+## E23 – Bewertung wilder Begegnungen als eigene Regel-Abfrage (05.10.2026)
+
+Ob eine Begegnung als Gebietschance zählt (Schillernd, Schonfrist ohne Bälle, Duplikat, Aufhol-Sperre, schon
+genutzt/verbraucht), steht in `rules.encounter_status`. Die Engine nutzt sie für `encounter_failed`, das Overlay
+zu Kampfbeginn. Reihenfolge: Schillernd vor allem anderen; eine bereits genutzte oder verbrauchte Chance geht vor
+der Duplikat-Klausel, die wiederum vor der Aufhol-Sperre steht.

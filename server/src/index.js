@@ -50,8 +50,9 @@ async function createServer({ config = loadConfig(), store, now, logger = consol
       res.end(JSON.stringify({ ok: true, lobbies: hub.lobbies.size }));
       return;
     }
-    // Todesprotokoll als Text für Stream-Overlays: /api/<LOBBY>/todesprotokoll.txt
-    const m = /^\/api\/([A-Za-z0-9]{3,16})\/todesprotokoll\.txt$/.exec(req.url.split('?')[0]);
+    // Todesprotokoll als Text für Stream-Overlays: /api/<LOBBY>/todesprotokoll.txt (aktueller Versuch)
+    // und /api/<LOBBY>/todesprotokoll_alle.txt (alle Versuche, dauerhaft)
+    const m = /^\/api\/([A-Za-z0-9]{3,16})\/todesprotokoll(_alle)?\.txt$/.exec(req.url.split('?')[0]);
     if (m) {
       const lobby = hub.lobbies.get(m[1].toUpperCase());
       if (!lobby) {
@@ -59,7 +60,7 @@ async function createServer({ config = loadConfig(), store, now, logger = consol
         return;
       }
       res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' });
-      res.end(core.deathlog(lobby.state, hub.lobbyStats(lobby)));
+      res.end(m[2] ? core.deathlogAll(hub.lobbyLedger(lobby)) : core.deathlog(lobby.state, hub.lobbyStats(lobby)));
       return;
     }
     if (config.serve_web) return serveStatic(req, res, webDir);

@@ -4,14 +4,17 @@
 --
 -- Aufbau:
 --   { players = { [id] = { name, deaths, dragged, attempts, wins, runs, places = { ["1"] = n, ... } } },
---     constellations = { [schluessel] = { label, runs, teams = { [teamschluessel] = { label, wins, places } } } } }
+--     constellations = { [schluessel] = { label, runs, teams = { [teamschluessel] = { label, wins, places } } } },
+--     deathlog = { { t, player, player_name, label, level, area, opponent, by, cause, attempt, lobby }, ... } }
 
 local U = require("core.util")
 
 local L = {}
 
+L.DEATHLOG_LIMIT = 2000 -- älteste Einträge fallen danach heraus
+
 function L.new()
-  return U.map({ players = U.map(), constellations = U.map() })
+  return U.map({ players = U.map(), constellations = U.map(), deathlog = U.list() })
 end
 
 local function player(ledger, pid, name)
@@ -47,8 +50,13 @@ function L.apply(ledger, effects, names)
   names = names or {}
   ledger.players = ledger.players or U.map()
   ledger.constellations = ledger.constellations or U.map()
+  ledger.deathlog = ledger.deathlog or U.list()
   for _, e in ipairs(effects) do
-    if e.type == "stat" then
+    if e.type == "death" then
+      local log = ledger.deathlog
+      log[#log + 1] = e.entry
+      while #log > L.DEATHLOG_LIMIT do table.remove(log, 1) end
+    elseif e.type == "stat" then
       local p = player(ledger, e.player, names[e.player])
       p[e.key] = (p[e.key] or 0) + e.delta
     elseif e.type == "reset_stats" then
@@ -108,7 +116,14 @@ function L.view(ledger, pids)
     end
     if all_in then cons[key] = c end
   end
-  return U.map({ players = players, constellations = cons })
+  -- Todesprotokoll der Spieler dieser Lobby (neueste 300)
+  local deaths = U.list()
+  local log = ledger.deathlog or {}
+  for i = #log, 1, -1 do
+    if set[log[i].player] then deaths[#deaths + 1] = log[i] end
+    if #deaths >= 300 then break end
+  end
+  return U.map({ players = players, constellations = cons, deathlog = deaths })
 end
 
 return L

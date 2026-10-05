@@ -68,9 +68,19 @@ Merkmal „kann frei laufen“, Merkmal „Spitznamen-Abfrage offen“. Den Spie
 **Phase 5 – Randomizer:** Stufe A fertig. Stufen B und C: Zuordnungen fertig, Schreibzugriffe laut Vorgabe erst
 nach stabil getesteter Stufe A bzw. B.
 
-**Phase 6:** fertig im Code. Duplikat-Klausel mit Entwicklungsreihen aus der ROM, Schillernd-Klausel,
-Schonfrist, Geschenke, Folgemodus (Optionen-Adresse fehlt im Profil), Todesprotokoll mit Textexport (Server und
-lokal), Versuchszähler, Items im Kampf (erkennen und protokollieren).
+**Phase 6:** fertig im Code. Im Einzelnen:
+1. Duplikat-Klausel: mit Entwicklungsreihen aus der ROM.
+2. Schillernd-Klausel.
+3. Schonfrist.
+4. Geschenke und feste Begegnungen zählen als Gebietsfang. Das Randomisieren gehört zu Phase 5, Stufe B, und ist
+   laut Vorgabe bis zum Test von Stufe A gesperrt.
+5. Folgemodus: Die Optionen-Adresse fehlt noch im Profil.
+6. Todesprotokoll: dauerhaft über alle Versuche (in der Bilanz, mit Versuchsnummer), Textexport für den aktuellen
+   Versuch und für alle Versuche (Server und lokal), Anzeige in der Run-Übersicht; dazu der Versuchszähler.
+7. Items im Kampf: erkennen und protokollieren.
+
+Dazu der Hinweis zu Kampfbeginn, ob eine wilde Begegnung zählt. Die Bewertung steht dafür einmal in
+`core.rules.encounter_status` und wird von Engine und Overlay genutzt.
 
 **Phase 7:** fertig im Code. Vorlagen eingebaut, eigene speichern und laden (Server und Solo), Discord,
 Run-Übersicht mit Bilanz.
@@ -84,6 +94,8 @@ Handicap-Ereignisse, Zeitleiste, Protokoll von Regelverstößen. Das Verstoß-Pr
 
 ## Verlauf
 
+- 05.10.2026 (7): Phase 6 abgeschlossen: dauerhaftes Todesprotokoll über alle Versuche (+ Export, Übersicht),
+  Datum im Export, Begegnungs-Bewertung als Regel-Abfrage mit Hinweis zu Kampfbeginn.
 - 05.10.2026 (6): Box-Suche, tote Monster in der Kampfkopie auf 0 KP (battle_safe), Vorschläge per Taste V,
   native Bit-Bibliothek nutzen, wenn vorhanden.
 - 05.10.2026 (5): Todesprotokoll-Export, Bilanz (Siege, Platzierungen, Konstellationen), Vorlagen/Teams aus

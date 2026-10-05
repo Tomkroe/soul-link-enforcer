@@ -480,3 +480,26 @@ T.test("Vorschlag per Taste V aus config.lua", function()
   T.eq(last.kind, "settings")
   T.eq(last.payload.changes.level_cap, false)
 end)
+
+T.test("Hinweis zu Kampfbeginn: zählt die Begegnung? (einmal pro Kampf)", function()
+  local app, emu, mem = make_app()
+  local H = require("core.helpers")
+  local s = H.run(1)
+  deliver(app, mem, { { op = "welcome", player = "anna", last_seq = 0 }, { op = "state", state = s.state } })
+  local battle = { wild = true, opponent = { species = 16, shiny = false } }
+  app.reader.snapshot = function() return { t = 0, party = {}, area = { key = "201", name = "Route 201" }, battle = battle } end
+  app:tick()
+  local found = 0
+  for _, m in ipairs(app.messages) do if m.text:find("Erste Begegnung in 201") or m.text:find("Erste Begegnung in Route 201") then found = found + 1 end end
+  T.eq(found, 1)
+  app:tick()
+  local again = 0
+  for _, m in ipairs(app.messages) do if m.text:find("Erste Begegnung") then again = again + 1 end end
+  T.eq(again, 1, "nur einmal pro Kampf")
+  battle.opponent.shiny = true
+  app.reader.snapshot = function() return { t = 0, party = {}, area = { key = "201", name = "Route 201" } } end
+  app:tick()
+  app.reader.snapshot = function() return { t = 0, party = {}, area = { key = "201", name = "Route 201" }, battle = battle } end
+  app:tick()
+  T.ok(app.messages[#app.messages].text:find("Schillernd"))
+end)

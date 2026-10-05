@@ -36,6 +36,38 @@ function R.catch_allowed(state, pid, area_key)
   return true, "Fang offen", "ok"
 end
 
+--- Bewertung einer wilden Begegnung (Phase 6): Zählt sie als Gebietschance? Wird von der Engine
+-- (encounter_failed) und vom Overlay zu Kampfbeginn genutzt.
+-- opp: { family, shiny }. Rückgabe: { counts = bool, kind, text }
+-- kind: "zaehlt" | "schillernd" | "keine_baelle" | "duplikat" | "aufhol" | "genutzt" | "verbraucht" | "kein_run"
+function R.encounter_status(state, pid, area_key, opp)
+  opp = opp or {}
+  local p = state.players[pid]
+  local team = M.team_of(state, pid)
+  if not p or not team or state.phase ~= "running" then
+    return { counts = false, kind = "kein_run", text = "" }
+  end
+  local area = team.areas[U.key(area_key) or ""]
+  local name = area and area.name or tostring(area_key)
+  if opp.shiny and state.settings.shiny_clause then
+    return { counts = false, kind = "schillernd", text = "Schillernd! Darf immer gefangen werden und zählt nicht als Gebietsfang." }
+  end
+  if not p.has_balls then
+    return { counts = false, kind = "keine_baelle", text = "Noch keine Bälle – Begegnung in " .. name .. " zählt nicht." }
+  end
+  local allowed, reason, kind = R.catch_allowed(state, pid, area_key)
+  if not allowed and kind ~= "aufhol" then
+    return { counts = false, kind = kind, text = reason .. " – diese Begegnung zählt nicht mehr." }
+  end
+  if state.settings.dupes_clause and opp.family and opp.family ~= 0 and M.team_families(state, team)[opp.family] then
+    return { counts = false, kind = "duplikat", text = "Duplikat-Klausel: Diese Begegnung verbraucht " .. name .. " nicht." }
+  end
+  if not allowed then
+    return { counts = false, kind = "aufhol", text = reason .. " – die Begegnung verbraucht das Gebiet nicht." }
+  end
+  return { counts = true, kind = "zaehlt", text = "Erste Begegnung in " .. name .. ": Fangen oder das Gebiet ist verbraucht!" }
+end
+
 --- Darf der Spieler den nächsten Orden holen / die nächste Arena betreten?
 function R.gym_allowed(state, pid)
   local p = state.players[pid]

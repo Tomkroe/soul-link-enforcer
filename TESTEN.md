@@ -142,6 +142,9 @@ Vorbereitung: `backups.save_path` setzen, `write_enabled = true`, nur `party` au
       Meldung „Regelverstoß … Item(s) benutzt“ und Eintrag im Verlauf. Außerhalb des Kampfes: keine Meldung.
 - [ ] Todesprotokoll: `local/todesprotokoll.txt` und `http://localhost:8080/api/SOUL01/todesprotokoll.txt`
       zeigen jeden Tod mit Gebiet, Level, Gegner.
+- [ ] Nach einem neuen Versuch: `…/todesprotokoll_alle.txt` enthält weiter die Tode des alten Versuchs (mit Versuchsnummer).
+- [ ] Zu Beginn einer wilden Begegnung erscheint der passende Hinweis: zählt / Duplikat / Schillernd / keine Bälle /
+      Aufhol-Sperre. Bei einer Begegnung in einem schon genutzten Gebiet erscheint kein Hinweis.
 
 ## 5. Randomizer (erst nach Abschnitt 3)
 

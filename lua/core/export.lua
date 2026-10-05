@@ -7,14 +7,29 @@ local X = {}
 
 local CAUSES = { eigener = "gefallen", mitgerissen = "mitgerissen", gebiet_verbraucht = "Gebiet verbraucht", gesperrt = "gesperrt" }
 
-local function clock(t)
-  if not t or t == 0 then return "--:--" end
-  -- t in ms seit 1970 (UTC). Uhrzeit ohne Datumsbibliothek, damit Server und Script gleich formatieren.
-  local s = math.floor(t / 1000)
-  local h = math.floor(s / 3600) % 24
-  local m = math.floor(s / 60) % 60
-  return string.format("%02d:%02d UTC", h, m)
+-- Kalenderdatum aus Tagen seit 1970 (proleptischer Gregorianischer Kalender, Algorithmus von H. Hinnant).
+local function civil(days)
+  local z = days + 719468
+  local era = math.floor(z / 146097)
+  local doe = z - era * 146097
+  local yoe = math.floor((doe - math.floor(doe / 1460) + math.floor(doe / 36524) - math.floor(doe / 146096)) / 365)
+  local doy = doe - (365 * yoe + math.floor(yoe / 4) - math.floor(yoe / 100))
+  local mp = math.floor((5 * doy + 2) / 153)
+  local d = doy - math.floor((153 * mp + 2) / 5) + 1
+  local m = mp < 10 and mp + 3 or mp - 9
+  return yoe + era * 400 + (m <= 2 and 1 or 0), m, d
 end
+X.civil = civil
+
+--- Zeitstempel (ms seit 1970, UTC) als "TT.MM. hh:mm UTC" – ohne Datumsbibliothek, damit Server und Script
+-- gleich formatieren.
+local function clock(t)
+  if not t or t == 0 then return "--.--. --:--" end
+  local s = math.floor(t / 1000)
+  local _, mo, d = civil(math.floor(s / 86400))
+  return string.format("%02d.%02d. %02d:%02d UTC", d, mo, math.floor(s / 3600) % 24, math.floor(s / 60) % 60)
+end
+X.clock = clock
 
 --- Todesprotokoll als Text: Kopfzeile mit Versuch und Zählern, dann ein Tod pro Zeile (neueste zuerst).
 -- stats: optionale dauerhafte Statistik pro Spieler. limit: maximale Zeilen (Standard 50).
@@ -54,6 +69,22 @@ function X.deathlog(state, stats, limit)
       where, by, CAUSES[d.cause] or d.cause)
   end
   if #all == 0 then lines[#lines + 1] = "Noch keine Tode." end
+  return table.concat(lines, "\n") .. "\n"
+end
+
+--- Todesprotokoll über alle Versuche (aus der dauerhaften Bilanz, neueste zuerst).
+function X.deathlog_all(ledger_view, limit)
+  limit = limit or 100
+  local lines = { "Soul Link – Todesprotokoll über alle Versuche" }
+  local log = (ledger_view and ledger_view.deathlog) or {}
+  for i = 1, math.min(limit, #log) do
+    local d = log[i]
+    local where = (d.area or "") ~= "" and (" in " .. d.area) or ""
+    local by = (d.opponent or "") ~= "" and (" gegen " .. d.opponent) or (((d.by or "") ~= "") and (" durch " .. d.by) or "")
+    lines[#lines + 1] = string.format("%s  Versuch %s  %s (%s) Lv.%s%s%s – %s", clock(d.t), U.num(d.attempt or 0),
+      d.label or "?", d.player_name or d.player or "?", U.num(d.level or 0), where, by, CAUSES[d.cause] or tostring(d.cause))
+  end
+  if #log == 0 then lines[#lines + 1] = "Noch keine Tode." end
   return table.concat(lines, "\n") .. "\n"
 end
 

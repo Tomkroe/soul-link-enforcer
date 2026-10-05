@@ -301,9 +301,18 @@ Team-Konstellation: Runs, Siege und Platzierungen je Team) liegen dauerhaft auf 
 zusätzlich lokal in `local/todeszaehler.json`. Sie überstehen Neustarts und neue Runs. Die Run-Übersicht
 zeigt die Bilanz.
 
-**Todesprotokoll als Textdatei** (für ein Stream-Overlay, z. B. OBS „Text aus Datei“ oder „Browserquelle“):
-- vom Server: `http(s)://<server>/api/<LOBBY>/todesprotokoll.txt`
-- lokal vom Script: `local/todesprotokoll.txt` (wird bei jeder Änderung neu geschrieben)
+**Todesprotokoll** (Schalter `death_log`, Standard an): Pro Tod werden Gebiet, Level, Gegner bzw. Auslöser, Art
+des Todes, Zeitpunkt und Versuchsnummer gespeichert. Das Protokoll ist dauerhaft wie der Todeszähler, auch über
+neue Versuche hinweg (bis 2000 Einträge). Als Textdatei für ein Stream-Overlay (z. B. OBS „Text aus Datei“ oder
+„Browserquelle“):
+- aktueller Versuch: `http(s)://<server>/api/<LOBBY>/todesprotokoll.txt`, lokal `local/todesprotokoll.txt`
+- alle Versuche: `http(s)://<server>/api/<LOBBY>/todesprotokoll_alle.txt`, lokal `local/todesprotokoll_alle.txt`
+
+Die Run-Übersicht zeigt beide Protokolle.
+
+**Hinweis zu Kampfbeginn:** Bei jeder wilden Begegnung sagt das Overlay, ob sie als Gebietschance zählt
+(„Erste Begegnung in … – fangen oder das Gebiet ist verbraucht!“) oder warum nicht: Schillernd, Duplikat,
+noch keine Bälle, Aufhol-Sperre.
 
 ## Schalter und Vorlagen
 

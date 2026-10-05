@@ -219,6 +219,16 @@ function renderLedger(state, ledger) {
   return html;
 }
 
+function renderDeathlogAll(state, ledger) {
+  const log = (ledger && ledger.deathlog) || [];
+  if (!log.length) return '<p class="muted">Noch keine Tode.</p>';
+  const rows = log.slice(0, 100).map((d) => `<tr><td>${time(d.t)}</td><td>${d.attempt ?? ''}</td><td>${esc(d.label)}</td>
+    <td>${esc(d.player_name || pname(state, d.player))}</td><td>${d.level || ''}</td><td>${esc(d.area)}</td>
+    <td>${esc(d.opponent || d.by)}</td><td>${CAUSES[d.cause] || esc(d.cause)}</td></tr>`).join('');
+  return `<div class="scroll"><table><thead><tr><th>Zeit</th><th>Versuch</th><th>Monster</th><th>Spieler</th><th>Lv.</th>
+    <th>Gebiet</th><th>Gegner / Auslöser</th><th>Art</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
 function render() {
   if (!last) return;
   const { state, derived, stats } = last;
@@ -235,5 +245,6 @@ function render() {
   html += card('Verlauf', renderLog(state));
   html += card('Frühere Versuche', renderHistory(state), true);
   html += card('Bilanz (alle Runs)', renderLedger(state, last.ledger), true);
+  html += card('Todesprotokoll (alle Versuche)', renderDeathlogAll(state, last.ledger), true);
   app.innerHTML = html;
 }

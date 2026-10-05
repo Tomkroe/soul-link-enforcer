@@ -272,6 +272,8 @@ test('Todesprotokoll als Textdatei für Stream-Overlays', async () => {
     const text = await res.text();
     assert.match(text, /Anna: 1 Tode/);
     assert.match(text, /Plinfa \(Anna\) Lv\.7 in Zweiblattdorf gegen Rivale – gefallen/);
+    const all = await (await fetch(`http://127.0.0.1:${port}/api/STREAM/todesprotokoll_alle.txt`)).text();
+    assert.match(all, /Versuch 1 {2}Plinfa \(Anna\) Lv\.7/);
     const missing = await fetch(`http://127.0.0.1:${port}/api/NIX123/todesprotokoll.txt`);
     assert.equal(missing.status, 404);
     a.close();

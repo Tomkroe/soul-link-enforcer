@@ -198,7 +198,7 @@ class Hub {
     }
     lobby.state = state;
     lobby.dirty = true;
-    if (effects.some((e) => e.type === 'stat' || e.type === 'reset_stats' || e.type === 'result')) {
+    if (effects.some((e) => e.type === 'stat' || e.type === 'reset_stats' || e.type === 'result' || e.type === 'death')) {
       const names = {};
       for (const pid of lobby.state.order) names[pid] = lobby.state.players[pid].name;
       this.ledger = this.core.ledgerApply(this.ledger, effects, names);

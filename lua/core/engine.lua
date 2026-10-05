@@ -90,6 +90,15 @@ function Ctx:kill_mon(pid, uid, cause, info)
     by = info and info.by or "",
   })
   team.graveyard[#team.graveyard + 1] = entry
+  -- Dauerhaftes Todesprotokoll über alle Versuche (core/ledger.lua), sofern eingeschaltet
+  if state.settings.death_log then
+    local copy = U.copy(entry)
+    copy.attempt = state.attempt
+    copy.lobby = state.code
+    copy.team = team.id
+    copy.player_name = p.name
+    self:emit({ type = "death", entry = copy })
+  end
 
   if cause == "eigener" then
     p.deaths = p.deaths + 1
@@ -596,19 +605,11 @@ function handlers.encounter_failed(ctx, ev)
   if not area then return ctx:fail("Begegnung ohne Gebiet") end
   local ar = M.ensure_area(team, area, ctx.t)
 
-  if ev.shiny and state.settings.shiny_clause then return end
-  if not p.has_balls then
-    ctx:notify("Noch keine Bälle – Begegnung in " .. ar.name .. " zählt nicht.", "info", { ev.player })
-    return
-  end
-  if state.settings.dupes_clause and ev.family and ev.family ~= 0 and M.team_families(state, team)[ev.family] then
-    ctx:notify("Duplikat-Klausel: Die Begegnung verbraucht " .. ar.name .. " nicht.", "info", { ev.player })
-    return
-  end
-  local allowed, reason, kind = R.catch_allowed(state, ev.player, ar.key)
-  if not allowed then
-    if kind == "aufhol" then
-      ctx:notify(reason .. " – die Begegnung verbraucht das Gebiet nicht.", "info", { ev.player })
+  local st = R.encounter_status(state, ev.player, ar.key, { family = ev.family, shiny = ev.shiny })
+  if not st.counts then
+    -- Hinweis nur, wenn er dem Spieler etwas sagt (nicht bei bereits genutzter/verbrauchter Chance)
+    if st.kind == "keine_baelle" or st.kind == "duplikat" or st.kind == "aufhol" then
+      ctx:notify(st.text, "info", { ev.player })
     end
     return
   end
