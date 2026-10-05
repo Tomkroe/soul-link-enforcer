@@ -161,6 +161,7 @@ function Ctx:check_team_end(team)
   if R.team_wiped(team) then
     team.status = "verloren"
     team.finished_at = self.t
+    for _, q in ipairs(team.members) do self:resolve_tips(q, "ausgeschieden") end
     local text = "Alle Gruppen tot – " .. (#state.team_order > 1 and (team.name .. " scheidet aus.") or "der Run ist verloren.")
     self:notify(text, "alarm")
     self:log("team_lost", text, { team = team.id })
@@ -338,6 +339,7 @@ function handlers.start_run(ctx, ev)
 
   state.attempt = state.attempt + 1
   state.phase = "running"
+  state.tips = U.map()
   -- Randomizer ohne Seed: festen Seed für diesen Versuch vergeben (gleich für alle, steht im Zustand)
   local rs = state.settings.randomizer
   if rs.mode ~= "aus" and rs.seed == "" then
@@ -502,6 +504,7 @@ function handlers.status(ctx, ev)
         ctx:violation(ev.player, "orden_aufhol",
           "Regelverstoß: " .. p.name .. " hat im Aufhol-Modus einen Orden geholt. " .. reason, "alarm")
       end
+      ctx:resolve_tips(ev.player, "orden")
       -- Zähler für Erfolge
       ctx:emit({ type = "stat", player = ev.player, key = "badges", delta = ev.badges - before })
       if p.deaths == 0 then ctx:emit({ type = "stat", player = ev.player, key = "flawless_badge", delta = 1 }) end
@@ -787,6 +790,85 @@ function handlers.party(ctx, ev)
     end
   end
   p.party = party
+end
+
+-- Tipprunden vor Arenen (Idee für später, umgesetzt) ---------------------------
+
+E.TIP_OPTIONS = { ohne_tod = "ohne Tod", ein_tod = "1 Tod", mehr = "2+ Tode oder ausgeschieden" }
+
+local function open_round_for(state, target)
+  for _, r in pairs(state.tips or {}) do
+    if r.target == target and r.status == "offen" then return r end
+  end
+end
+E.open_round_for = open_round_for
+
+--- Runde öffnen: Wie geht der nächste Orden von "target" aus?
+function handlers.tip_open(ctx, ev)
+  local state = ctx.state
+  local p = require_running(ctx, ev)
+  if not p then return end
+  local target = ev.target or ev.player
+  local tp = state.players[target]
+  if not tp or tp.team == "" then return ctx:fail("Unbekannter Spieler für die Tipprunde") end
+  if state.teams[tp.team].status ~= "aktiv" then return ctx:fail(tp.name .. " ist nicht mehr im Rennen.") end
+  if open_round_for(state, target) then return ctx:fail("Für " .. tp.name .. " läuft schon eine Tipprunde.") end
+  state.tips = state.tips or U.map()
+  state.counters.tip = (state.counters.tip or 0) + 1
+  local id = "r" .. U.num(state.counters.tip)
+  state.tips[id] = U.map({
+    id = id, target = target, by = ev.player, opened_at = ctx.t, status = "offen",
+    deaths_at_open = tp.deaths, badge_at_open = tp.badges, tips = U.map(), result = "",
+  })
+  local text = "Tipprunde für " .. tp.name .. ": Wie geht Orden " .. U.num(tp.badges + 1) .. " aus? "
+    .. "ohne Tod / 1 Tod / 2+ Tode oder ausgeschieden"
+  ctx:notify(text, "info")
+  ctx:log("tip_open", text, { player = target })
+  ctx:discord("tip", text)
+end
+
+--- Tipp abgeben (einer pro Spieler und Runde, änderbar bis zum Kampf oder ersten Tod).
+function handlers.tip(ctx, ev)
+  local state = ctx.state
+  local r = (state.tips or {})[ev.round or ""]
+  if not r and ev.target then r = open_round_for(state, ev.target) end
+  if not r or r.status ~= "offen" then return ctx:fail("Keine offene Tipprunde") end
+  if not E.TIP_OPTIONS[ev.option or ""] then return ctx:fail("Ungültiger Tipp") end
+  if not state.players[ev.player] then return ctx:fail("Unbekannter Spieler") end
+  local tp = state.players[r.target]
+  if tp.in_battle or tp.deaths > r.deaths_at_open then
+    return ctx:fail("Tipps sind geschlossen – " .. tp.name .. " kämpft schon oder hat schon verloren.")
+  end
+  r.tips[ev.player] = ev.option
+  ctx:notify(M.player_name(state, ev.player) .. " hat getippt (" .. tp.name .. ").", "info")
+end
+
+--- Runde auflösen (beim nächsten Orden oder wenn das Team ausscheidet).
+function Ctx:resolve_tips(target, reason)
+  local state = self.state
+  local r = open_round_for(state, target)
+  if not r then return end
+  local tp = state.players[target]
+  local deaths = tp.deaths - r.deaths_at_open
+  local result
+  if reason == "ausgeschieden" or deaths >= 2 then result = "mehr"
+  elseif deaths == 1 then result = "ein_tod"
+  else result = "ohne_tod" end
+  r.status = "aufgeloest"
+  r.result = result
+  r.resolved_at = self.t
+  local winners = {}
+  for _, pid in ipairs(state.order) do
+    if r.tips[pid] == result then
+      winners[#winners + 1] = M.player_name(state, pid)
+      self:emit({ type = "stat", player = pid, key = "tip_points", delta = 1 })
+    end
+  end
+  local text = "Tipprunde " .. tp.name .. ": " .. E.TIP_OPTIONS[result] .. ". Richtig getippt: "
+    .. (#winners > 0 and table.concat(winners, ", ") or "niemand")
+  self:notify(text, "info")
+  self:log("tip_result", text, { player = target })
+  self:discord("tip", text)
 end
 
 -- Abstimmungen ------------------------------------------------------------

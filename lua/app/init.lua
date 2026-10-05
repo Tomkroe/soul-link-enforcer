@@ -300,6 +300,17 @@ function App:handle_keys()
       self:note("Neuer Versuch angefordert – zurück in die Lobby.")
     end
   end
+  -- Tipprunde: T öffnet eine Runde für den eigenen nächsten Orden; 7/8/9 tippen auf die älteste offene Runde
+  if state and state.phase == "running" then
+    if self:key_pressed(hk.tip_open) then self.client:send_event({ type = "tip_open" }) end
+    local round = self:open_tip_round()
+    local opts = { { hk.tip_a, "ohne_tod" }, { hk.tip_b, "ein_tod" }, { hk.tip_c, "mehr" } }
+    for _, o in ipairs(opts) do
+      if round and self:key_pressed(o[1]) then
+        self.client:send_event({ type = "tip", round = round.id, option = o[2] })
+      end
+    end
+  end
   if self:key_pressed(hk.propose) and state and state.phase == "running" then
     local v = self.cfg.proposal
     if not v or not v.kind then
@@ -395,6 +406,16 @@ function App:export_deathlog()
       self.fs.write_atomic(self.local_dir .. "/todesprotokoll_alle.txt", all)
     end
   end
+end
+
+--- Älteste offene Tipprunde.
+function App:open_tip_round()
+  local state = self.client.state
+  local best
+  for _, r in pairs(state and state.tips or {}) do
+    if r.status == "offen" and (not best or r.opened_at < best.opened_at) then best = r end
+  end
+  return best
 end
 
 --- Älteste offene Abstimmung, bei der man selbst noch nicht zugestimmt hat.
@@ -549,6 +570,15 @@ function App:lines()
     lines[#lines + 1] = { text = "Taste " .. tostring(hk.start) .. ": Run starten (Einstellungen aus config.lua)", color = "gelb" }
   elseif state and state.phase == "finished" then
     lines[#lines + 1] = { text = "Taste " .. tostring(hk.start) .. ": neuer Versuch", color = "gelb" }
+  end
+  local round = self:open_tip_round()
+  if round and state then
+    local tp = state.players[round.target]
+    local mine = round.tips[self:pid() or ""]
+    local labels = { ohne_tod = "ohne Tod", ein_tod = "1 Tod", mehr = "2+/raus" }
+    lines[#lines + 1] = { text = "Tipprunde " .. (tp and tp.name or "?") .. ": " .. tostring(hk.tip_a) .. "=ohne Tod "
+      .. tostring(hk.tip_b) .. "=1 Tod " .. tostring(hk.tip_c) .. "=2+/raus" .. (mine and (" (dein Tipp: " .. labels[mine] .. ")") or ""),
+      color = "gelb" }
   end
   local prop = self:open_proposal()
   if prop then

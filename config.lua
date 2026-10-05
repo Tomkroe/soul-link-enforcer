@@ -41,6 +41,10 @@ return {
     propose = "V",      -- Vorschlag aus "proposal" (unten) an alle senden
     groups = "H",       -- Gruppen-Ansicht
     achievements = "E", -- Erfolge
+    tip_open = "T",     -- Tipprunde für den eigenen nächsten Orden öffnen
+    tip_a = "7",        -- Tipp: ohne Tod
+    tip_b = "8",        -- Tipp: 1 Tod
+    tip_c = "9",        -- Tipp: 2+ Tode oder ausgeschieden
     record = "K",       -- Eingabe-Aufnahme starten/beenden (für die Prolog-Eingabefolge im Profil)
   },
 

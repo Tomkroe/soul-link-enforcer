@@ -9,6 +9,7 @@ return {
   "core.export_test",
   "core.ledger_test",
   "core.competition_test",
+  "core.tips_test",
   "net.client_test",
   "net.local_hub_test",
   "mem.pkm_test",

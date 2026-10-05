@@ -23,7 +23,8 @@ function M.new_state(code)
     teams = U.map(),            -- [team_id] = Team (ab Run-Start)
     team_order = U.list(),
     proposals = U.map(),        -- offene Abstimmungen
-    counters = U.map({ group = 0, proposal = 0, finish = 0 }),
+    counters = U.map({ group = 0, proposal = 0, finish = 0, tip = 0 }),
+    tips = U.map(),             -- Tipprunden vor Arenen [id] = Runde
     log = U.list(),
     history = U.list(),         -- frühere Versuche
     started_at = 0,

@@ -267,6 +267,18 @@ const ACHIEVEMENTS = [
   ['tippkoenig', 'Tippkönig'],
 ];
 
+const TIP_LABELS = { ohne_tod: 'ohne Tod', ein_tod: '1 Tod', mehr: '2+ Tode oder ausgeschieden' };
+
+function renderTips(state) {
+  const rounds = Object.values(state.tips || {}).sort((a, b) => b.opened_at - a.opened_at);
+  if (!rounds.length) return '<p class="muted">Noch keine Tipprunde (im Script Taste T vor dem Arenakampf).</p>';
+  return `<ul class="feed">${rounds.map((r) => {
+    const tips = Object.entries(r.tips || {}).map(([pid, opt]) => `${esc(pname(state, pid))}: ${esc(TIP_LABELS[opt] || opt)}`).join(', ') || 'noch keine Tipps';
+    const res = r.status === 'offen' ? '<b>offen</b>' : `Ergebnis: <b>${esc(TIP_LABELS[r.result] || r.result)}</b>`;
+    return `<li>${esc(pname(state, r.target))} – ${res} · ${tips}</li>`;
+  }).join('')}</ul>`;
+}
+
 function renderAchievements(state, ledger) {
   if (!ledger) return '<p class="muted">Noch keine Bilanz.</p>';
   return `<div class="stats">${state.order.map((pid) => {
@@ -311,5 +323,6 @@ function render() {
   html += card('Todesprotokoll (alle Versuche)', renderDeathlogAll(state, last.ledger), true);
   html += card('Regelverstöße', renderViolations(state, last.ledger), true);
   html += card('Erfolge', renderAchievements(state, last.ledger), true);
+  if (state.phase !== 'lobby') html += card('Tipprunden', renderTips(state));
   app.innerHTML = html;
 }

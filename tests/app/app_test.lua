@@ -549,3 +549,28 @@ T.test("Lobby zeigt Teams und Hinweis bei ungleicher Größe", function()
   T.ok(all:find("Teams: Anna & Ben vs%. Cem"), all)
   T.ok(all:find("ungleich groß"), all)
 end)
+
+T.test("Tipprunde per Taste: öffnen (T) und tippen (7/8/9), Anzeige im Overlay", function()
+  local app, emu, mem = make_app()
+  app.cfg.hotkeys.tip_open, app.cfg.hotkeys.tip_a, app.cfg.hotkeys.tip_b, app.cfg.hotkeys.tip_c = "T", "7", "8", "9"
+  local H = require("core.helpers")
+  local s = H.run(2)
+  s:ok("tip_open", "ben")
+  deliver(app, mem, { { op = "welcome", player = "anna", last_seq = 0 }, { op = "state", state = s.state } })
+  app:tick()
+  local found = false
+  for _, l in ipairs(app:lines()) do if l.text:find("Tipprunde Ben") then found = true end end
+  T.ok(found)
+  emu.pressed = { ["8"] = true }
+  app:frame()
+  local sent = outbox(mem)
+  T.eq(sent[#sent].event.type, "tip")
+  T.eq(sent[#sent].event.option, "ein_tod")
+  T.eq(sent[#sent].event.round, "r1")
+  emu.pressed = {}
+  app:frame()
+  emu.pressed = { T = true }
+  app:frame()
+  sent = outbox(mem)
+  T.eq(sent[#sent].event.type, "tip_open")
+end)
