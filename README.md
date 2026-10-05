@@ -210,6 +210,7 @@ Tasten (änderbar in `config.lua`):
 | `P` | Sperre 30 Sekunden aussetzen, um zum PC zu laufen (wird angezeigt) |
 | `N` | Lobby: Run starten (mit `lobby_settings` aus `config.lua`) / nach Run-Ende: neuer Versuch |
 | `Y` / `U` | offene Abstimmung annehmen / ablehnen |
+| `V` | Vorschlag aus `proposal` in `config.lua` senden (Einstellungen ändern, Zähler zurücksetzen, aufgeben) |
 | `H` | Gruppen-Ansicht (alle Gruppen mit Mitgliedern und Status, * = im eigenen Team) |
 | `K` | Eingabe-Aufnahme starten/beenden (für „Prolog überspringen“) |
 

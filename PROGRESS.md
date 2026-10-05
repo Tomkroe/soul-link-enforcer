@@ -50,8 +50,8 @@ unten nicht anders genannt.
 **Phase 1 – Lesen:** Platin-Profil bestätigen (Bericht `local/adressen_CPUD.txt`). Spieldaten aus der ROM sind
 gebaut (Namen, Typen, Wachstum, Entwicklungsreihen); Pfade, Textbank-Nummern und Zeichentabelle sind zu prüfen.
 Spielzeit-Kandidat liefert `check.lua`. **Noch nicht gebaut:** Gebietsnamen (Zuordnung Karte → Ortsname liegt
-nicht in einem einfachen Archiv), Boxen lesen (keine Quelle; Fänge bei vollem Team werden bis dahin nicht
-erkannt), Kampfergebnis (Entscheidung „verpasst“ läuft über 20 s Wartezeit), „im Menü/PC“ erkennen.
+nicht in einem einfachen Archiv), Boxen lesen (Box-Suche in `check.lua` ist gebaut; Adresse muss im Emulator ermittelt werden, bis dahin
+werden Fänge bei vollem Team nicht erkannt), Kampfergebnis (Entscheidung „verpasst“ läuft über 20 s Wartezeit), „im Menü/PC“ erkennen.
 
 **Phase 2:** fertig, Prüfung im Emulator (TESTEN.md Abschnitt 2).
 
@@ -84,6 +84,8 @@ Handicap-Ereignisse, Zeitleiste, Protokoll von Regelverstößen. Das Verstoß-Pr
 
 ## Verlauf
 
+- 05.10.2026 (6): Box-Suche, tote Monster in der Kampfkopie auf 0 KP (battle_safe), Vorschläge per Taste V,
+  native Bit-Bibliothek nutzen, wenn vorhanden.
 - 05.10.2026 (5): Todesprotokoll-Export, Bilanz (Siege, Platzierungen, Konstellationen), Vorlagen/Teams aus
   config.lua, Items im Kampf, Spieldaten aus der ROM, Level-Cap durchsetzen, Sonderbonbons, Folgemodus,
   Gen-4-Zeichensatz, Spielername-Kandidat, Spielzeit-Suche.

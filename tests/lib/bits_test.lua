@@ -34,3 +34,30 @@ T.test("mul32 exakt modulo 2^32", function()
   T.eq(bits.mul32(H("FFFFFFFF"), H("FFFFFFFF")), 1)
   T.eq(bits.mul32(0x12345678, H("9ABCDEF0")), 0x242D2080)
 end)
+
+T.test("Native Bit-Bibliothek (vorzeichenbehaftet wie LuaBitOp) wird korrekt eingebunden", function()
+  local saved = { bxor = bits.bxor, band = bits.band, bor = bits.bor, native = bits.native }
+  -- Nachbildung von LuaBitOp: Ergebnisse als vorzeichenbehaftete 32-Bit-Zahlen
+  local function signed(v) if v >= 2147483648 then return v - 4294967296 end return v end
+  local fake = {
+    bxor = function(a, b) return signed(saved.bxor(a, b)) end,
+    band = function(a, b) return signed(saved.band(a, b)) end,
+    bor = function(a, b) return signed(saved.bor(a, b)) end,
+  }
+  T.ok(bits.use_native(fake))
+  T.eq(bits.bxor(H("FFFFFFFF"), 0xFFFF), H("FFFF0000"))
+  T.eq(bits.band(-1, 0xFF), 255)
+  -- PK4-Rundreise mit nativer Bibliothek
+  local P = require("mem.pkm")
+  local b = {}
+  for i = 1, 136 do b[i] = (i * 13) % 256 end
+  P.set_u32(b, 0, 2882400001)
+  P.set_u16(b, 6, P.checksum(b))
+  local raw = P.encrypt(b)
+  bits.bxor, bits.band, bits.bor, bits.native = saved.bxor, saved.band, saved.bor, saved.native
+  local back = P.decrypt(raw)
+  for i = 1, 136 do T.eq(back[i], b[i]) end
+  -- fehlerhafte Bibliothek wird abgelehnt
+  T.no(bits.use_native({ bxor = function() return 0 end, band = function() return 0 end, bor = function() return 0 end }))
+  T.no(bits.use_native(nil))
+end)

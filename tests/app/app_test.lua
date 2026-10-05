@@ -458,3 +458,25 @@ T.test("Level-Cap, Sonderbonbons und Namen/Typen aus der ROM im Prüfzyklus", fu
   T.eq(mon.types, { "Pflanze", "Gift" })
   T.eq(mon.family, 1)
 end)
+
+T.test("Vorschlag per Taste V aus config.lua", function()
+  local app, emu, mem = make_app()
+  app.cfg.hotkeys.propose = "V"
+  local H = require("core.helpers")
+  local s = H.run(2)
+  deliver(app, mem, { { op = "welcome", player = "anna", last_seq = 0 }, { op = "state", state = s.state } })
+  app:tick()
+  emu.pressed = { V = true }
+  app:frame()
+  T.ok(app.messages[#app.messages].text:find("Kein Vorschlag"))
+  emu.pressed = {}
+  app:frame()
+  app.cfg.proposal = { kind = "settings", changes = { level_cap = false } }
+  emu.pressed = { V = true }
+  app:frame()
+  local sent = outbox(mem)
+  local last = sent[#sent].event
+  T.eq(last.type, "propose")
+  T.eq(last.kind, "settings")
+  T.eq(last.payload.changes.level_cap, false)
+end)

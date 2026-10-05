@@ -33,6 +33,30 @@ function bits.band(a, b) return bitop(a, b, function(x, y) return x == 1 and y =
 function bits.bor(a, b) return bitop(a, b, function(x, y) return x == 1 or y == 1 end) end
 function bits.bxor(a, b) return bitop(a, b, function(x, y) return x ~= y end) end
 
+--- Nutzt eine native Bit-Bibliothek (z. B. LuaBitOp "bit" in DeSmuME), falls vorhanden. Deren Ergebnisse sind
+-- vorzeichenbehaftet (-2^31 .. 2^31-1) und werden hier auf 0 .. 2^32-1 gebracht. Ein Selbsttest mit bekannten
+-- Werten entscheidet; schlägt er fehl, bleibt die arithmetische Fassung.
+function bits.use_native(lib)
+  if type(lib) ~= "table" or type(lib.bxor) ~= "function" or type(lib.band) ~= "function" or type(lib.bor) ~= "function" then
+    return false
+  end
+  local function wrap(f) return function(a, b) return norm(f(norm(a), norm(b))) end end
+  local nx, na, no = wrap(lib.bxor), wrap(lib.band), wrap(lib.bor)
+  local ok = pcall(function()
+    assert(nx(4294967295, 65535) == 4294901760)
+    assert(na(4042322160, 4278255360) == 4026593280)
+    assert(no(4042322160, 252645135) == 4294967295)
+    assert(nx(305419896, 2596069104) == bits.bxor(305419896, 2596069104))
+  end)
+  if not ok then return false end
+  bits.bxor, bits.band, bits.bor = nx, na, no
+  bits.native = true
+  return true
+end
+
+-- DeSmuME bringt LuaBitOp als globales "bit" mit (getestet: nein); sonst bleibt die arithmetische Fassung.
+if rawget(_G, "bit") then bits.use_native(rawget(_G, "bit")) end
+
 function bits.lshift(a, n) return norm(norm(a) * 2 ^ n) end
 function bits.rshift(a, n) return math.floor(norm(a) / 2 ^ n) end
 

@@ -144,3 +144,30 @@ T.test("Beutel: Summe der Medizin- und Kampf-Items", function()
   local r = Reader.new({ profile = Profiles.load("CPUD"), emu = emu })
   T.eq(r:snapshot(0).battle_items, 8)
 end)
+
+T.test("Kampfkopie: tote Monster im Kampf auf 0 KP, nur mit battle_safe", function()
+  local emu = Emu.fake()
+  local vbase = us_layout(emu)
+  local battle = vbase + 0x4B8AC
+  local m1 = F.party_mon(305419896, 393, 5, 20, 20)
+  local m2 = F.party_mon(77, 25, 9, 25, 25)
+  for i, v in ipairs(m1) do emu.write8(battle + i - 1, v) end
+  for i, v in ipairs(m2) do emu.write8(battle + 236 + i - 1, v) end
+  local profile = copy(Profiles.load("CPUD"))
+  local guard = Guard.new({ profile = profile, emu = emu, enabled = true })
+  guard:set_selftest(true)
+  local r = Reader.new({ profile = profile, emu = emu, guard = guard })
+  local uid2 = P.uid({ pid = 77, tid = 1, sid = 2 })
+  local ok, why = r:set_hp_battle(uid2, 0)
+  T.no(ok)
+  T.ok(why:find("nicht getestet"))
+  profile.addresses.battle_party.tested = true
+  ok, why = r:set_hp_battle(uid2, 0)
+  T.no(ok)
+  T.ok(why:find("im Kampf nicht freigegeben"))
+  profile.addresses.battle_party.battle_safe = true
+  T.ok(r:set_hp_battle(uid2, 0))
+  T.eq(P.parse(P.decrypt(emu.read_bytes(battle + 236, 236)), 4).hp, 0)
+  T.eq(P.parse(P.decrypt(emu.read_bytes(battle, 236)), 4).hp, 20, "anderes Monster unverändert")
+  T.eq(r:set_hp_battle(uid2, 0), nil, "schon 0")
+end)

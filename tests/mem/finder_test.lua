@@ -122,4 +122,23 @@ T.test("Spielzeit-Suche: Wert, der jede Sekunde um 1 wächst", function()
   T.eq(#Finder.playtime_candidates({ samples[1], samples[2] }), 0, "zu wenige Proben")
 end)
 
+T.test("Box-Suche: bekanntes Monster als 136-Byte-Datensatz außerhalb des Teams finden", function()
+  local emu = Emu.fake()
+  local party = 0x02100100
+  local mon = party_mon(2882400001, 393, 5, 20, 20)
+  put_party(emu, party, { mon })
+  -- Box-Datensatz = die ersten 136 Byte (Box-Format, gleich verschlüsselt)
+  local boxed = P.decrypt(mon)
+  local box = {}
+  for i = 1, 136 do box[i] = boxed[i] end
+  local raw = P.encrypt(box)
+  for i, v in ipairs(raw) do emu.write8(0x02180000 + i - 1, v) end
+  local uid = P.uid({ pid = 2882400001, tid = 1, sid = 2 })
+  local s = Finder.box_scanner(emu, { [2882400001] = uid }, 4, party - 8, party + 6 * 236,
+    { from = 0x02100000, to = 0x02190000 })
+  while not s:step(0x20000) do end
+  T.eq(#s.found, 1, "Team-Bereich ausgenommen")
+  T.eq(s.found[1].addr, 0x02180000)
+end)
+
 return { party_mon = party_mon, put_party = put_party }

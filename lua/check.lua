@@ -71,6 +71,7 @@ local function write_report(d)
     lines[#lines + 1] = name .. ": " .. tostring(d[name])
   end
   lines[#lines + 1] = rando_info
+  lines[#lines + 1] = search.box_info or "Box: (kein Box-Datensatz gefunden – Monster in Box 1, Platz 1 legen)"
   lines[#lines + 1] = search.playtime or "Spielzeit: (noch kein Kandidat – check.lua einige Sekunden laufen lassen)"
   for _, h in ipairs(search.pointers or {}) do
     lines[#lines + 1] = string.format("Zeiger auf Team-Basis: [%s] + 0x%s", hex(h.ptr), P.hex(h.offset))
@@ -182,6 +183,23 @@ gui.register(function()
     gui.text(2, y, search.playtime, "white")
     y = y + 9
   end
+  -- Box-Suche: Kennungen aller je im Team gesehenen Monster merken; liegt eines davon in einer Box,
+  -- wird es dort gefunden. Ablauf: ein Team-Monster in Box 1, Platz 1 legen, check.lua weiterlaufen lassen.
+  search.pids = search.pids or {}
+  for _, m in ipairs(d.party or {}) do search.pids[m.pid] = m.uid end
+  if not search.box_done and next(search.pids) then
+    search.box = search.box or Finder.box_scanner(adapter, search.pids, profile.gen, d.party_addr - 8, d.party_addr + 6 * 236)
+    search.box:step(0x40000)
+    for _, f in ipairs(search.box.found) do
+      local rel = f.addr - d.party_addr
+      search.box_info = string.format("Box-Datensatz: %s (Team %s0x%s) – liegt das Monster in Box 1, Platz 1, ist das der Box-Anfang",
+        hex(f.addr), rel < 0 and "-" or "+", P.hex(math.abs(rel)))
+      search.box_done = true
+    end
+    if search.box.done then search.box = nil end
+  end
+  gui.text(2, y, search.box_info or "Box-Suche: ein Team-Monster in Box 1, Platz 1 legen ...", "gray")
+  y = y + 9
   gui.text(2, y, "Team: " .. hex(d.party_addr) .. " (" .. tostring(d.party_source) .. "), Anzahl " .. tostring(d.party_count), "green")
   y = y + 9
   for i, m in ipairs(d.party or {}) do

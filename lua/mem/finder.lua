@@ -127,6 +127,32 @@ function Finder.block_equals(emu, addr, blk)
   return true
 end
 
+--- Schrittweise Suche nach Box-Datensätzen (136 Byte) bekannter Monster, außerhalb des Team-Bereichs.
+-- pids: Menge [pid] = uid. Rückgabe wie scanner: .found = { {addr, uid}, ... }.
+function Finder.box_scanner(emu, pids, gen, exclude_from, exclude_to, opts)
+  opts = opts or {}
+  local s = { pos = opts.from or Finder.RAM_START, stop = opts.to or Finder.RAM_END, found = {}, done = false }
+  function s:step(bytes)
+    local last = math.min(self.stop - P.BOX_SIZE, self.pos + (bytes or 0x10000))
+    local addr = self.pos
+    while addr < last do
+      local uid = pids[emu.read32(addr)]
+      if uid and not (exclude_from and addr >= exclude_from and addr < exclude_to) then
+        local plain = P.decrypt(emu.read_bytes(addr, P.BOX_SIZE))
+        if P.valid(plain) then
+          local m = P.parse(plain, gen)
+          if m.uid == uid then self.found[#self.found + 1] = { addr = addr, uid = uid } end
+        end
+      end
+      addr = addr + 4
+    end
+    self.pos = last
+    if self.pos >= self.stop - P.BOX_SIZE then self.done = true end
+    return self.done
+  end
+  return s
+end
+
 --- Spielzeit-Suche: samples = Liste { bytes = {...}, dt = Sekunden seit der vorigen Probe } eines Speicherfensters.
 -- Kandidat ist ein 4-Byte-Wert (u16 Stunden, u8 Minuten, u8 Sekunden), dessen Gesamtsekunden zwischen
 -- allen Proben um genau dt (±1) wachsen. Rückgabe: Liste { offset, seconds } (offset im Fenster).

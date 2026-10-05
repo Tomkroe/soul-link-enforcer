@@ -38,9 +38,16 @@ return {
     start = "N",        -- Lobby: Run starten / nach Run-Ende: neuer Versuch
     vote_yes = "Y",     -- offene Abstimmung annehmen
     vote_no = "U",      -- offene Abstimmung ablehnen
+    propose = "V",      -- Vorschlag aus "proposal" (unten) an alle senden
     groups = "H",       -- Gruppen-Ansicht
     record = "K",       -- Eingabe-Aufnahme starten/beenden (für die Prolog-Eingabefolge im Profil)
   },
+
+  -- Vorschlag während des Runs (Taste V), wird nur mit Zustimmung aller wirksam:
+  --   { kind = "settings", changes = { level_cap = false } }  Einstellungen ändern (oder preset = "locker")
+  --   { kind = "reset_counters" }                               Todeszähler zurücksetzen
+  --   { kind = "abandon" }                                      Run aufgeben
+  proposal = nil,
 
   -- Ersatzwerte für Automatiken, solange noch kein Run-Zustand da ist (sonst gelten die Lobby-Einstellungen)
   automation = { skip_prologue = false, skip_nickname = false },

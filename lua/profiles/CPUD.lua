@@ -58,6 +58,13 @@ return {
     battle_type = { chain = CHAIN, offset = 0x4189E, width = 16, wild_if_zero = true, tested = false },
     battle_enemy = { chain = CHAIN, offset = 0x4BE5C, tested = false },
 
+    -- Boxen: keine Quelle. check.lua findet den Anfang (Monster in Box 1, Platz 1 legen); dann hier eintragen:
+    -- boxes = { rel = "party", offset = <aus dem Bericht>, count = 18, slots = 30, tested = false },
+
+    -- Kampfkopie des Teams ([IM] playerBattleBase, Basis +0x4B8AC): tote Monster auch im Kampf auf 0 KP halten.
+    -- Nur mit battle_safe = true (nach Test im Emulator).
+    battle_party = { chain = CHAIN, offset = 0x4B8AC, tested = false, battle_safe = false },
+
     -- Geladene Begegnungstabelle der aktuellen Karte: keine Quelle. Das Script sucht sie im Speicher
     -- (exakter Abgleich mit den Begegnungsdateien aus der eigenen ROM, rom_path in config.lua).
     encounter_table = { scan = true, tested = false },

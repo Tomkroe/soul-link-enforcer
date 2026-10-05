@@ -93,6 +93,9 @@ Vorbereitung: `backups.save_path` setzen, `write_enabled = true`, nur `party` au
       um zum PC zu laufen. In die Box legen → Sperre weg.
 - [ ] Regel 4: Lässt sich ein totes Monster auf irgendeinem Weg im Kampf einsetzen? (Beleber im Kampf,
       Tausch im Kampf, Doppelkampf) → Es darf nicht kämpfen können. Notieren, was passiert.
+- [ ] Kampfkopie (`battle_party`, Basis +0x4B8AC laut US-Quelle): Im Memory Viewer prüfen, ob dort im Kampf die
+      Team-Datensätze liegen. Erst dann `tested = true, battle_safe = true` → Beleber im Kampf auf totes Monster:
+      KP springen innerhalb von Sekundenbruchteilen auf 0 zurück.
 - [ ] **Regel 5 – Team-Gleichheit:** A nimmt Gruppe 2 aus dem Team, B nicht → bei beiden Sperre mit
       „Fehlt im Team“ bzw. „Zu viel im Team“; korrigieren → Sperre weg.
 - [ ] `joypad.set`: Werden gesperrte Tasten wirklich unterdrückt? (Tastennamen, Wirkung von `false`)
@@ -117,6 +120,10 @@ Vorbereitung: `backups.save_path` setzen, `write_enabled = true`, nur `party` au
 - [ ] Spitzname eines Monsters mit Umlaut wird im Overlay richtig angezeigt.
 
 ## Weitere Adressen mit `check.lua`
+
+- [ ] Box-Suche: ein Team-Monster in **Box 1, Platz 1** legen, `check.lua` weiterlaufen lassen →
+      „Box-Datensatz: 0x… (Team ±0x…)“. Als `boxes = { rel = "party", offset = …, count = 18, slots = 30 }` ins Profil.
+      Danach: Fang mit vollem Team wird erkannt (Log „… hat … gefangen“).
 
 - [ ] „Spielzeit-Kandidat: Team -0x… = h:mm:ss“ erscheint nach einigen Sekunden und stimmt mit der Spielzeit im
       Trainerpass überein → als `play_time = { rel = "party", offset = -0x…, tested = false }` ins Profil.

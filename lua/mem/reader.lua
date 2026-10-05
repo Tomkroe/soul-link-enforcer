@@ -271,6 +271,29 @@ function Reader:update_party_mon(uid, change, in_battle)
   return self.guard:write_bytes("party", base_off, P.encrypt(change(plain)), in_battle)
 end
 
+--- Im Kampf: KP eines Monsters in der Kampfkopie des Teams setzen (Profil: battle_party, braucht battle_safe).
+-- Rückgabe: true (geschrieben), false + Grund, oder nil (nicht nötig / nicht gefunden).
+function Reader:set_hp_battle(uid, hp)
+  local e = self:entry("battle_party")
+  if not e then return false, "battle_party fehlt im Profil" end
+  local ok, reason = self.guard:can_write("battle_party", true)
+  if not ok then return false, reason end
+  local base = self:resolve(e)
+  if not base then return false, "Kampfkopie nicht gefunden" end
+  for i = 0, 5 do
+    local addr = base + i * self.party_size
+    local plain = P.decrypt(self.emu.read_bytes(addr, self.party_size))
+    if P.valid(plain) then
+      local m = P.parse(plain, self.gen)
+      if m.uid == uid then
+        if m.hp == hp then return nil end
+        return self.guard:write_bytes_at("battle_party", addr, P.encrypt(P.set_hp(plain, hp)), true)
+      end
+    end
+  end
+  return nil
+end
+
 --- Erfahrung deckeln (Level-Cap).
 function Reader:cap_exp(uid, max_exp)
   return self:update_party_mon(uid, function(plain) return P.cap_exp(plain, max_exp) end, false)

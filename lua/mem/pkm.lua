@@ -86,7 +86,7 @@ local function crypt(b, from, to, seed)
   for off = from, to - 1, 2 do
     seed = P.next_seed(seed)
     local key = math.floor(seed / 65536)
-    P.set_u16(b, off, bxor16(P.u16(b, off), key))
+    P.set_u16(b, off, (bits.native and bits.bxor or bxor16)(P.u16(b, off), key))
   end
 end
 

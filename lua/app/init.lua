@@ -299,6 +299,15 @@ function App:handle_keys()
       self:note("Neuer Versuch angefordert – zurück in die Lobby.")
     end
   end
+  if self:key_pressed(hk.propose) and state and state.phase == "running" then
+    local v = self.cfg.proposal
+    if not v or not v.kind then
+      self:note("Kein Vorschlag in config.lua (proposal = { kind = ... }).", "warn")
+    else
+      self.client:send_event({ type = "propose", kind = v.kind, payload = { changes = v.changes, preset = v.preset } })
+      self:note("Vorschlag gesendet – alle müssen zustimmen.")
+    end
+  end
   local prop = self:open_proposal()
   if prop and (self:key_pressed(hk.vote_yes) or self:key_pressed(hk.vote_no)) then
     self.client:send_event({ type = "vote", id = prop.id, accept = self:key_pressed(hk.vote_yes) and true or false })
@@ -448,6 +457,13 @@ function App:tick()
     if self.guard:can_write("party", in_battle) then
       self.backup:before_first_write(snap and snap.badges)
       self.reader:set_hp(uid, 0, in_battle)
+    end
+  end
+  -- Im Kampf zusätzlich die Kampfkopie: ein totes Monster bleibt auch nach Beleber/Tausch im Kampf bei 0 KP
+  if in_battle and self.reader and self.guard:can_write("battle_party", true) then
+    for uid in pairs(dead) do
+      self.backup:before_first_write(snap and snap.badges)
+      self.reader:set_hp_battle(uid, 0)
     end
   end
 
