@@ -5,7 +5,7 @@ local function with_stub(fn)
   local saved = { memory = memory, emu = emu, gui = gui, input = input, joypad = joypad, exec = os.execute, print = print }
   local mem = {}
   local code = "CPUD"
-  for i = 1, 4 do mem[0x027FFE0C + i - 1] = code:byte(i) end
+  for i = 1, 4 do mem[0x023FFE0C + i - 1] = code:byte(i) end
   local cb = { after = {}, gui = {} }
   local shown = {}
   memory = {
@@ -43,8 +43,8 @@ T.test("main.lua läuft mit DeSmuME-API (Lesemodus, keine Schreibzugriffe)", fun
       cb.gui[1]()
     end
     local all = table.concat(shown, "\n")
-    T.ok(all:find("LESEMODUS"), all)
-    T.ok(all:find("Platin"), all)
+    T.ok(all:find("Profil Platin: 0/"), all)
+    T.ok(all:find("nur lesen"), all)
     T.ok(commands[1] and commands[1]:find("bridge.js"), "Brücke gestartet")
   end)
 end)
@@ -58,5 +58,6 @@ T.test("check.lua läuft und zeigt Ergebnisse", function()
     T.ok(all:find("CPUD"), all)
     T.ok(all:find("OK  Datei schreiben"), all)
     T.ok(all:find("OK  Selbsttest"), all)
+    T.ok(all:find("Suche Team im Speicher"), all)
   end)
 end)

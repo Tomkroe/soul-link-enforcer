@@ -8,8 +8,8 @@ Zielspiele: DS-Hauptspiele der 4. und 5. Generation, deutsche Versionen. Jeder s
 Spielkopie. Das Projekt enthält und lädt **keine ROMs, keine Spielgrafiken, keine Spieltexte**.
 
 > **Stand:** Regel-Engine, Server, Netzanbindung, Run-Übersicht und Script-Gerüst sind fertig und
-> automatisch getestet. Speicheradressen der Spiele fehlen noch (Profile). Bis dahin läuft das Script
-> im **reinen Lesemodus** und schreibt nichts. Details in [PROGRESS.md](PROGRESS.md), Begründungen
+> automatisch getestet. Für Platin (CPUD) gibt es ein erstes, noch ungetestetes Profil mit automatischer
+> Adress-Suche. Solange keine Adresse im Emulator bestätigt ist, schreibt das Script nichts. Details in [PROGRESS.md](PROGRESS.md), Begründungen
 > in [DECISIONS.md](DECISIONS.md), Prüfschritte im Emulator in [TESTEN.md](TESTEN.md).
 
 ## Inhalt
@@ -288,8 +288,12 @@ Zurückspielen:
 
 1. Game-Code mit `lua/check.lua` ablesen (z. B. `CPUD` für Platin, deutsch).
 2. `lua/profiles/_vorlage.lua` nach `lua/profiles/<CODE>.lua` kopieren.
-3. Adressen ermitteln (DeSmuME *Tools > RAM Search / Memory Viewer*). Viele Werte liegen hinter einem
-   Basiszeiger und werden als `{ ptr = ..., offset = ... }` eingetragen.
+3. Adressen ermitteln (DeSmuME *Tools > RAM Search / Memory Viewer*). Formen:
+   `{ addr = A }` fest, `{ ptr = P, offset = O }` hinter einem Zeiger,
+   `{ chain = { S, o1 }, offset = O }` Zeigerkette, `{ rel = "party", offset = O }` relativ zum Team.
+   Für das Team selbst können `candidates` angegeben werden, dazu `scan = true`. Dann sucht das Script das Team
+   über seine Signatur im Speicher, falls kein Kandidat passt. `lua/check.lua` zeigt die gefundene Team-Adresse
+   und die Profilwerte live an und schreibt einen Bericht nach `local/adressen_<CODE>.txt`.
 4. Jede Adresse bleibt auf `tested = false`, bis ihr Prüfschritt in TESTEN.md erfolgreich war.
    Nur `tested = true` erlaubt Schreibzugriffe; Lesen geht immer.
 5. `gym_levels` mit den höchsten Leveln der Arenaleiter füllen.

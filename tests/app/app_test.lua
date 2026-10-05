@@ -10,11 +10,11 @@ local Launcher = require("net.launcher")
 local PROFILE = {
   game_code = "TEST", name = "Testspiel", gen = 4,
   addresses = {
-    party_count = { addr = 0x1000, tested = true },
-    party = { addr = 0x2000, tested = true, battle_safe = false },
-    area_id = { addr = 0x3000, tested = true },
-    badges = { addr = 0x3004, tested = true },
-    bag_balls = { addr = 0x3008, tested = true },
+    party = { addr = 0x02002000, tested = true, battle_safe = false },
+    party_count = { rel = "party", offset = -4, width = 32, tested = true },
+    area_id = { addr = 0x02003000, width = 16, tested = true },
+    badges = { addr = 0x02003004, tested = true },
+    bag_balls = { addr = 0x02003008, width = 16, tested = true },
   },
   gym_levels = { 14, 22 },
 }
@@ -26,7 +26,7 @@ local function party_mon(pid, hp)
   P.set_u16(b, 0x08, 25)
   P.set_u16(b, 0x0C, 1)
   P.set_u16(b, 0x0E, 2)
-  P.set_u16(b, 0x8C, 10)
+  b[0x8C + 1] = 10
   P.set_u16(b, 0x8E, hp)
   P.set_u16(b, 0x90, 30)
   P.set_u16(b, 0x06, P.checksum(b))
@@ -101,9 +101,9 @@ T.test("Unbekannte ROM: Lesemodus, keine Schreibzugriffe, Meldung im Overlay", f
 end)
 
 T.test("Bekannte Edition ohne Profil: Lesemodus mit Namen", function()
-  local app = make_app({ game_code = "CPUD" })
+  local app = make_app({ game_code = "APAD" })
   T.ok(app.read_only)
-  T.ok(app.profile_msg:find("Platin"))
+  T.ok(app.profile_msg:find("Perl"))
 end)
 
 T.test("Brücke wird automatisch gestartet", function()
@@ -118,12 +118,13 @@ end)
 T.test("Anmeldung, Spielzustand melden, totes Monster auf 0 KP setzen, Sperre im Overlay", function()
   local app, emu, mem, clock = make_app()
   -- zwei Monster im Team
-  emu.write8(0x1000, 2)
-  write_bytes(emu, 0x2000, party_mon(305419896, 20))
-  write_bytes(emu, 0x2000 + 236, party_mon(2882400001, 25))
-  emu.write16(0x3000, 412)
-  emu.write8(0x3004, 3) -- zwei Orden (Bits 0 und 1)
-  emu.write16(0x3008, 5)
+  emu.write32(0x02002000 - 8, 6)
+  emu.write32(0x02002000 - 4, 2)
+  write_bytes(emu, 0x02002000, party_mon(305419896, 20))
+  write_bytes(emu, 0x02002000 + 236, party_mon(2882400001, 25))
+  emu.write16(0x02003000, 412)
+  emu.write8(0x02003004, 3) -- zwei Orden (Bits 0 und 1)
+  emu.write16(0x02003008, 5)
   local uid_a = P.uid({ pid = 305419896, tid = 1, sid = 2 })
   local uid_b = P.uid({ pid = 2882400001, tid = 1, sid = 2 })
 
@@ -147,11 +148,11 @@ T.test("Anmeldung, Spielzustand melden, totes Monster auf 0 KP setzen, Sperre im
   T.eq(status.has_balls, true)
   T.eq(#party.mons, 2)
   -- totes Monster auf 0 KP gesetzt (verschlüsselt, Prüfsumme gültig)
-  local back = P.parse(P.decrypt(emu.read_bytes(0x2000, 236)), 4)
+  local back = P.parse(P.decrypt(emu.read_bytes(0x02002000, 236)), 4)
   T.eq(back.uid, uid_a)
   T.eq(back.hp, 0)
   T.ok(back.valid)
-  local other = P.parse(P.decrypt(emu.read_bytes(0x2000 + 236, 236)), 4)
+  local other = P.parse(P.decrypt(emu.read_bytes(0x02002000 + 236, 236)), 4)
   T.eq(other.hp, 25)
   -- Sicherung vor dem ersten Schreiben
   T.eq(mem.files["bk/D_orden2_vor-schreiben.dsv"], "SAVE")
@@ -171,30 +172,32 @@ end)
 
 T.test("Schreiben abgeschaltet: KP bleiben, obwohl das Monster tot ist", function()
   local app, emu, mem = make_app({ write = false })
-  emu.write8(0x1000, 1)
-  write_bytes(emu, 0x2000, party_mon(305419896, 20))
+  emu.write32(0x02002000 - 8, 6)
+    emu.write32(0x02002000 - 4, 1)
+  write_bytes(emu, 0x02002000, party_mon(305419896, 20))
   local uid_a = P.uid({ pid = 305419896, tid = 1, sid = 2 })
   deliver(app, mem, {
     { op = "welcome", player = "anna", last_seq = 0 },
     { op = "state", state = server_state(uid_a, { uid_a, "x2" }) },
   })
   app:tick()
-  T.eq(P.parse(P.decrypt(emu.read_bytes(0x2000, 236)), 4).hp, 20)
+  T.eq(P.parse(P.decrypt(emu.read_bytes(0x02002000, 236)), 4).hp, 20)
 end)
 
 T.test("Ungetestete Adresse im Profil: kein Schreiben", function()
   local app, emu, mem = make_app()
   PROFILE.addresses.party.tested = false
   local ok = pcall(function()
-    emu.write8(0x1000, 1)
-    write_bytes(emu, 0x2000, party_mon(305419896, 20))
+    emu.write32(0x02002000 - 8, 6)
+    emu.write32(0x02002000 - 4, 1)
+    write_bytes(emu, 0x02002000, party_mon(305419896, 20))
     local uid_a = P.uid({ pid = 305419896, tid = 1, sid = 2 })
     deliver(app, mem, {
       { op = "welcome", player = "anna", last_seq = 0 },
       { op = "state", state = server_state(uid_a, { uid_a, "x2" }) },
     })
     app:tick()
-    T.eq(P.parse(P.decrypt(emu.read_bytes(0x2000, 236)), 4).hp, 20)
+    T.eq(P.parse(P.decrypt(emu.read_bytes(0x02002000, 236)), 4).hp, 20)
   end)
   PROFILE.addresses.party.tested = true
   T.ok(ok)

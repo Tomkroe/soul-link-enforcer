@@ -113,3 +113,20 @@ das Profil ein Kampfergebnis, wird sofort entschieden. Sonst wartet die Erkennun
 
 Die Aufgaben dieser Sitzung waren eng verzahnt (Zustandsmodell, Engine, Server und Tests hängen direkt
 voneinander ab). Eigene Agents unter `.claude/agents/` hätten keinen Nutzen gebracht.
+
+## E13 – Platin: Kandidaten aus US-Quellen plus Signatursuche (05.10.2026)
+
+Für die deutsche Platin-Version (CPUD) gibt es keine öffentlichen Adresslisten. Die Werkzeuge
+NDS-Ironmon-Tracker und yPokeStats unterstützen nur US/PAL bzw. Englisch und sagen ausdrücklich, dass andere
+Sprachversionen abweichen können. Deshalb:
+- Das Profil nennt deren Zeigerketten als **Kandidaten** (mit Quelle). Alle Einträge stehen auf `tested = false`.
+- Das Team wird über seine Struktur gefunden (u32 Kapazität 6, u32 Anzahl 1–6, erster Datensatz mit gültiger
+  Prüfsumme und plausiblen Werten). Das funktioniert unabhängig von Zeigern und Sprache und läuft schrittweise
+  über mehrere Frames.
+- Werte im Spielstand (Orden, Beutel) stehen relativ zum Team (`rel = "party"`). Der Spielstand-Aufbau ist
+  zwischen Sprachversionen vermutlich gleich; geprüft wird das in TESTEN.md Abschnitt 0b.
+- Werte außerhalb des Spielstands (Karte, Kampf) bleiben Zeigerketten bzw. feste Adressen. Liefern sie nichts
+  Plausibles, erscheinen sie als fehlend (nil) statt mit falschen Werten.
+- Header-Adresse: `0x023FFE0C` (so in beiden Quellen) statt der Spiegeladresse `0x027FFE0C`.
+- Arena-Level für das Level-Cap stammen aus allgemeinem Spielwissen und sind als ungeprüft markiert. Das
+  Overlay zeigt „(ungeprüft)“ hinter dem Cap.

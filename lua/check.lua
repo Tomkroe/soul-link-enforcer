@@ -38,7 +38,7 @@ add("Datei schreiben/umbenennen", ok_w and ok_r and ok_w2, test_path)
 local Emu = require("mem.emu")
 local adapter = Emu.desmume()
 local okc, code = pcall(adapter.game_code)
-add("Game-Code lesen (0x027FFE0C)", okc and code ~= nil, tostring(code))
+add("Game-Code lesen (0x023FFE0C)", okc and code ~= nil, tostring(code))
 local Profiles = require("profiles")
 local profile, msg = Profiles.load(okc and code or nil)
 add("Profil", profile ~= nil, msg)
@@ -47,11 +47,77 @@ add("Profil", profile ~= nil, msg)
 local App = require("app")
 add("Selbsttest PK4/PK5", App.selftest())
 
+-- Adress-Suche (nur lesen): Team über Kandidaten oder Signatur finden, Profilwerte live anzeigen.
+-- Ergebnis zusätzlich in local/adressen_<CODE>.txt (zum Weitergeben).
+local Reader = require("mem.reader")
+local Finder = require("mem.finder")
+local P = require("mem.pkm")
+local reader = profile and Reader.new({ profile = profile, emu = adapter }) or nil
+local search = { done = false, pointers = nil, ptr_pos = nil, written = false }
+
+local function hex(n) return n and ("0x" .. P.hex(n, 8)) or "–" end
+
+local function write_report(d)
+  local lines = {
+    "Soul-Link check.lua – Adress-Suche " .. os.date("%Y-%m-%d %H:%M"),
+    "Game-Code: " .. tostring(code),
+    "Team-Adresse: " .. hex(d.party_addr) .. " (" .. tostring(d.party_source) .. ")",
+    "Anzahl im Team: " .. tostring(d.party_count),
+  }
+  for i, m in ipairs(d.party or {}) do
+    lines[#lines + 1] = string.format("  %d: Art %d, Lv. %d, KP %d/%d, Kennung %s", i, m.species, m.level, m.hp, m.max_hp, m.uid)
+  end
+  for _, name in ipairs({ "badges", "area_id", "bag_balls", "battle_flag", "battle_type" }) do
+    lines[#lines + 1] = name .. ": " .. tostring(d[name])
+  end
+  for _, h in ipairs(search.pointers or {}) do
+    lines[#lines + 1] = string.format("Zeiger auf Team-Basis: [%s] + 0x%s", hex(h.ptr), P.hex(h.offset))
+  end
+  FS.write_atomic(ROOT .. "/local/adressen_" .. tostring(code) .. ".txt", table.concat(lines, "\n") .. "\n")
+end
+
 local frames = 0
 gui.register(function()
   frames = frames + 1
-  for i, r in ipairs(results) do
-    gui.text(2, 2 + (i - 1) * 9, (r.ok and "OK  " or "--  ") .. r.name .. " " .. r.detail, r.ok and "green" or "yellow")
+  local y = 2
+  for _, r in ipairs(results) do
+    gui.text(2, y, (r.ok and "OK  " or "--  ") .. r.name .. " " .. r.detail, r.ok and "green" or "yellow")
+    y = y + 9
   end
-  gui.text(2, 2 + #results * 9, "Frames: " .. frames, "white")
+  gui.text(2, y, "Frames: " .. frames, "white")
+  y = y + 9
+  if not reader then return end
+
+  local ok, d = pcall(reader.diagnose, reader)
+  if not ok then
+    gui.text(2, y, "Lesefehler: " .. tostring(d), "red")
+    return
+  end
+  if not d.party_addr then
+    local where = reader.scan and string.format("%.0f%%", (reader.scan.pos - Finder.RAM_START) / (Finder.RAM_END - Finder.RAM_START) * 100) or "–"
+    gui.text(2, y, "Suche Team im Speicher ... " .. where .. " (Spielstand laden, mind. 1 Monster im Team)", "yellow")
+    return
+  end
+  -- Zeiger auf die Team-Basis suchen (für bekannte Offsets), stückweise über mehrere Frames
+  if not search.pointers then search.pointers, search.ptr_pos = {}, Finder.RAM_START end
+  if search.ptr_pos < Finder.RAM_END then
+    local to = math.min(Finder.RAM_END, search.ptr_pos + 0x40000)
+    for _, h in ipairs(Finder.find_pointers(adapter, d.party_addr, { 0xB4, 0xD094 }, search.ptr_pos, to)) do
+      search.pointers[#search.pointers + 1] = h
+    end
+    search.ptr_pos = to
+  elseif not search.written then
+    search.written = true
+    write_report(d)
+  end
+  gui.text(2, y, "Team: " .. hex(d.party_addr) .. " (" .. tostring(d.party_source) .. "), Anzahl " .. tostring(d.party_count), "green")
+  y = y + 9
+  for i, m in ipairs(d.party or {}) do
+    gui.text(2, y, string.format("  %d: Art %d Lv.%d KP %d/%d", i, m.species, m.level, m.hp, m.max_hp), "white")
+    y = y + 9
+  end
+  gui.text(2, y, string.format("Orden-Byte %s  Karte %s  Bälle %s  Kampf %s/%s",
+    tostring(d.badges), tostring(d.area_id), tostring(d.bag_balls), tostring(d.battle_flag), tostring(d.battle_type)), "white")
+  y = y + 9
+  gui.text(2, y, search.written and ("Bericht: local/adressen_" .. tostring(code) .. ".txt") or "Suche Zeiger ...", "gray")
 end)

@@ -15,6 +15,7 @@ function Overlay.lines(ctx)
 
   add("Soul Link – " .. (ctx.net_status or "?"), ctx.online and "gruen" or "gelb")
   if ctx.read_only then add("LESEMODUS: " .. (ctx.profile_msg or "kein Profil"), "gelb") end
+  if ctx.profile_info then add(ctx.profile_info, "grau") end
   for _, w in ipairs(ctx.warnings or {}) do add("! " .. w, "rot") end
 
   if not state then return out end
@@ -36,7 +37,7 @@ function Overlay.lines(ctx)
     local ok, reason = R.gym_allowed(state, pid)
     if not ok then add(reason, "gelb") end
   end
-  if ctx.level_cap then add("Level-Cap: " .. num(ctx.level_cap), "weiss") end
+  if ctx.level_cap then add("Level-Cap: " .. (type(ctx.level_cap) == "number" and num(ctx.level_cap) or ctx.level_cap), "weiss") end
 
   if ctx.compact then return out end
 

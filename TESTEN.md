@@ -14,7 +14,7 @@ Legende: [ ] offen · [x] bestanden · [!] Problem (Notiz dahinter)
   - [ ] io.open / os.rename / os.execute: OK
   - [ ] LuaSocket vorhanden? ja / nein (beides in Ordnung)
   - [ ] „Datei schreiben/umbenennen“: OK
-  - [ ] Game-Code: ______ (z. B. CPUD = Platin deutsch). Falls leer: Adresse 0x027FFE0C stimmt nicht,
+  - [ ] Game-Code: ______ (erwartet CPUD). Falls leer: Adresse 0x023FFE0C stimmt nicht,
         im Memory Viewer nach den 4 Buchstaben suchen und in `lua/mem/emu.lua` eintragen.
   - [ ] Selbsttest PK4/PK5: OK
   - [ ] Overlay-Text sichtbar und „Frames“ zählt hoch.
@@ -23,6 +23,25 @@ Legende: [ ] offen · [x] bestanden · [!] Problem (Notiz dahinter)
 - [ ] Browser <http://localhost:8080/>, Server `ws://localhost:8080/ws`, Lobby `SOUL01`: Spieler erscheint online.
 - [ ] Script stoppen. Nach etwa 20 s steht der Spieler in der Übersicht auf „offline“.
 - [ ] Emulator schließen. Die Brücke beendet sich nach etwa 90 s von selbst.
+
+## 0b. Platin (CPUD): Adress-Suche mit `check.lua`
+
+Das Profil `lua/profiles/CPUD.lua` enthält Kandidaten aus Werkzeugen für die US-Version. Alles ist ungetestet.
+
+- [ ] Spielstand laden, **mindestens ein Monster im Team**, `lua/check.lua` ausführen.
+- [ ] Zeile „Team: 0x…“ erscheint. Notieren, ob „Kandidat 1 (Ironmon US)“, „Kandidat 2 (yPokeStats …)“
+      oder „Suche“ (Zeiger der deutschen Version weichen ab). Während der Suche kann das Bild kurz ruckeln.
+- [ ] Art-Nummern und Level stimmen mit dem Team im Spiel überein (z. B. Chelast = Art 387, Panflam = 390,
+      Plinfa = 393).
+- [ ] Nach kurzer Zeit „Bericht: local/adressen_CPUD.txt“ – **diese Datei bitte mitschicken**, darin stehen auch
+      gefundene Zeiger auf die Team-Basis.
+- [ ] „Orden-Byte“: 0 vor dem ersten Orden, nach Orden 1 → 1, nach Orden 2 → 3 (Bitfeld).
+      Stimmt es nicht, ist der Abstand Team → Orden (−0x1E) in der deutschen Version anders.
+- [ ] „Karte“: ändert sich beim Wechsel von Route/Stadt/Gebäude (gleiche Zahl beim selben Ort).
+- [ ] „Bälle“: 0 ohne Bälle, ungleich 0, sobald ein Ball im Beutel ist.
+- [ ] „Kampf“: erster Wert 8448 (0x2100) oder 8449 im Kampf, sonst anders. Zweiter Wert 0 bei wildem Kampf,
+      ungleich 0 bei Trainerkampf. Steht dort „nil“ oder ändert sich nichts → Adresse der deutschen Version fehlt.
+- [ ] Werte, die stimmen, in `CPUD.lua` auf `tested = true` setzen (nur Lese-Einträge; `party` erst nach Abschnitt 3).
 
 ## 1. Lesen (Profil anlegen, siehe README „Neues Profil anlegen“)
 

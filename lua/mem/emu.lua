@@ -3,8 +3,40 @@
 
 local Emu = {}
 
--- Game-Code: Kopie des ROM-Headers im Arbeitsspeicher (0x027FFE00 + 0x0C). getestet: nein
-Emu.GAME_CODE_ADDR = 0x027FFE0C
+-- Game-Code: Kopie des ROM-Headers im Arbeitsspeicher (0x023FFE00 + 0x0C), so auch in yPokeStats und im
+-- NDS-Ironmon-Tracker (Main RAM 0x3FFE00). getestet: nein
+Emu.GAME_CODE_ADDR = 0x023FFE0C
+
+local TWO32 = 4294967296
+
+--- Löst einen Profileintrag zur absoluten Adresse auf:
+---   { addr = A }                         -> A
+---   { ptr = P, offset = O }              -> read32(P) + O
+---   { chain = { S, o1, o2, ... }, offset = O } -> a = read32(S); a = read32(a + o1); ...; a + O
+-- Ergebnis nil, wenn ein Zeiger außerhalb des Hauptspeichers liegt.
+function Emu.resolve_with(read32, entry)
+  local function deref(addr)
+    local v = read32(addr)
+    if v < 0 then v = v + TWO32 end
+    if v < 0x02000000 or v >= 0x02400000 then return nil end
+    return v
+  end
+  if entry.chain then
+    local a = deref(entry.chain[1])
+    for i = 2, #entry.chain do
+      if not a then return nil end
+      a = deref(a + entry.chain[i])
+    end
+    if not a then return nil end
+    return a + (entry.offset or 0)
+  end
+  if entry.ptr then
+    local a = deref(entry.ptr)
+    if not a then return nil end
+    return a + (entry.offset or 0)
+  end
+  return entry.addr
+end
 
 local function game_code_from(read8)
   local chars = {}
@@ -36,10 +68,7 @@ function Emu.desmume()
   a.box = function(x1, y1, x2, y2, fill, line) gui.box(x1, y1, x2, y2, fill, line) end
   a.keys = function() return input.get() end
   a.set_joypad = function(t) joypad.set(t) end -- getestet: nein (Tastennamen und false-Wirkung prüfen)
-  a.resolve = function(entry)
-    if entry.ptr then return memory.readdword(entry.ptr) + (entry.offset or 0) end
-    return entry.addr
-  end
+  a.resolve = function(entry) return Emu.resolve_with(a.read32, entry) end
   return a
 end
 
@@ -65,10 +94,7 @@ function Emu.fake(opts)
   a.box = function() end
   a.keys = function() return a.pressed end
   a.set_joypad = function(t) a.joypad = t end
-  a.resolve = function(entry)
-    if entry.ptr then return a.read32(entry.ptr) + (entry.offset or 0) end
-    return entry.addr
-  end
+  a.resolve = function(entry) return Emu.resolve_with(a.read32, entry) end
   if opts.game_code then
     for i = 1, 4 do mem[Emu.GAME_CODE_ADDR + i - 1] = opts.game_code:byte(i) end
   end

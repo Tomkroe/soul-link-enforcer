@@ -228,6 +228,17 @@ end
 
 local COLORS = { weiss = "white", gelb = "yellow", rot = "red", gruen = "green", grau = "gray" }
 
+function App:profile_info()
+  if not self.profile then return nil end
+  local tested, total = Profiles.coverage(self.profile)
+  local text = "Profil " .. self.profile.name .. ": " .. tested .. "/" .. total .. " Adressen getestet"
+  if not (self.guard.enabled and tested > 0) then text = text .. " – nur lesen" end
+  if self.reader and not self.reader.party_addr then
+    text = text .. (self.reader.scan and " – suche Team im Speicher" or " – Team nicht gefunden")
+  end
+  return text
+end
+
 --- Overlay-Zeilen für den aktuellen Zustand (auch für Tests).
 function App:lines()
   local state, pid = self.client.state, self:pid()
@@ -239,10 +250,12 @@ function App:lines()
   local cap
   if state and pid and self.profile and self.profile.gym_levels then
     cap = R.level_cap(state, pid, self.profile.gym_levels)
+    if cap and self.profile.gym_levels.tested ~= true then cap = cap .. " (ungeprüft)" end
   end
   local lines = Overlay.lines({
     state = state, pid = pid, net_status = self.client:status_text(), online = self.client:online(),
     read_only = self.read_only, profile_msg = self.profile_msg, warnings = self.warnings,
+    profile_info = self:profile_info(),
     stats = self.client.stats, lock_reasons = self.plan and self.plan.lock and self.plan.reasons or nil,
     messages = msgs, level_cap = cap, compact = self.cfg.overlay and self.cfg.overlay.compact,
   })

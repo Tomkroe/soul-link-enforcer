@@ -31,8 +31,12 @@ function Profiles.validate(p)
       if entry.tested ~= true and entry.tested ~= false then
         problems[#problems + 1] = "Adresse " .. name .. " ohne Markierung 'tested'"
       end
-      if entry.addr == nil and entry.ptr == nil then
-        problems[#problems + 1] = "Adresse " .. name .. " ohne addr/ptr"
+      if entry.addr == nil and entry.ptr == nil and entry.chain == nil and entry.rel == nil
+        and entry.candidates == nil and not entry.scan then
+        problems[#problems + 1] = "Adresse " .. name .. " ohne addr/ptr/chain/rel/candidates"
+      end
+      if entry.rel and not (p.addresses or {})[entry.rel] then
+        problems[#problems + 1] = "Adresse " .. name .. " bezieht sich auf unbekanntes '" .. tostring(entry.rel) .. "'"
       end
     end
   end
