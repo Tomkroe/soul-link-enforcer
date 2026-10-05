@@ -93,6 +93,19 @@ do
         rando_info = "Randomizer: " .. tostring(ferr or "NARC unlesbar") .. " (" .. tostring(profile.randomizer.encounter_narc) .. ")"
       else
         add("ROM gelesen", rom.game_code == code, "Game-Code im ROM " .. tostring(rom.game_code) .. ", " .. #files .. " Begegnungstabellen")
+        -- Spieldaten-Stichprobe: Namen und Typen müssen stimmen, sonst sind Textbank-Nummern/Pfade falsch
+        local GameData = require("mem.gamedata")
+        local okg, gd, gerr = pcall(GameData.load, rom, profile.gamedata, profile.gen)
+        if okg and gd then
+          local sample = {}
+          for _, sp in ipairs({ 1, 4, 7, 25, 387, 390, 393 }) do
+            sample[#sample + 1] = sp .. "=" .. tostring(gd:species_name(sp)) .. "/" .. table.concat(gd:types(sp) or { "?" }, "+")
+          end
+          add("Spieldaten", gd:species_name(25) ~= nil, table.concat(sample, " "))
+          add("Entwicklungsreihe", gd:family(2) == 1 and gd:family(3) == 1, "Art 3 gehört zu Reihe " .. tostring(gd:family(3)))
+        else
+          add("Spieldaten", false, tostring(okg and gerr or gd))
+        end
         rando_scan = Finder.block_scanner(adapter, files)
         rando_info = "Suche Begegnungstabelle ..."
       end

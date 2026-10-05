@@ -76,4 +76,71 @@ function F.enc_table(grass, surf)
   return table.concat(chars)
 end
 
+
+--- NDS-Abbild mit beliebigen Dateien: files = { ["pfad/zur/datei"] = inhalt, ... }
+function F.rom_files(files, game_code)
+  -- Ordnerbaum aufbauen
+  local root = { dirs = {}, files = {}, order = {} }
+  local paths = {}
+  for p in pairs(files) do paths[#paths + 1] = p end
+  table.sort(paths)
+  for _, p in ipairs(paths) do
+    local node = root
+    local parts = {}
+    for part in p:gmatch("[^/]+") do parts[#parts + 1] = part end
+    for i = 1, #parts - 1 do
+      if not node.dirs[parts[i]] then
+        node.dirs[parts[i]] = { dirs = {}, files = {}, order = {} }
+        node.order[#node.order + 1] = { dir = parts[i] }
+      end
+      node = node.dirs[parts[i]]
+    end
+    node.files[#node.files + 1] = { name = parts[#parts], data = files[p] }
+  end
+  -- Ordner nummerieren (Breitensuche), Dateien in Ordnerreihenfolge nummerieren
+  local dirs, queue = {}, { root }
+  while #queue > 0 do
+    local d = table.remove(queue, 1)
+    dirs[#dirs + 1] = d
+    d.id = #dirs - 1
+    for _, o in ipairs(d.order) do queue[#queue + 1] = d.dirs[o.dir] end
+  end
+  local file_list = {}
+  for _, d in ipairs(dirs) do
+    d.first_file = #file_list
+    for _, f in ipairs(d.files) do file_list[#file_list + 1] = f end
+  end
+  local subs = {}
+  for _, d in ipairs(dirs) do
+    local parts = {}
+    for _, f in ipairs(d.files) do parts[#parts + 1] = string.char(#f.name) .. f.name end
+    for _, o in ipairs(d.order) do
+      parts[#parts + 1] = string.char(0x80 + #o.dir) .. o.dir .. F.le16(0xF000 + d.dirs[o.dir].id)
+    end
+    parts[#parts + 1] = string.char(0)
+    subs[#subs + 1] = table.concat(parts)
+  end
+  local main, pos = {}, #dirs * 8
+  for i, d in ipairs(dirs) do
+    main[#main + 1] = F.le32(pos) .. F.le16(d.first_file) .. F.le16(i == 1 and #dirs or 0xF000)
+    pos = pos + #subs[i]
+  end
+  local fnt = table.concat(main) .. table.concat(subs)
+  local header_size = 0x200
+  local fnt_off = header_size
+  local fat_off = fnt_off + #fnt
+  local data_off = fat_off + 8 * #file_list
+  local fat, data = {}, {}
+  local p = data_off
+  for _, f in ipairs(file_list) do
+    fat[#fat + 1] = F.le32(p) .. F.le32(p + #f.data)
+    data[#data + 1] = f.data
+    p = p + #f.data
+  end
+  local header = string.rep("\0", 0x0C) .. (game_code or "TEST") .. string.rep("\0", 0x40 - 0x10)
+    .. F.le32(fnt_off) .. F.le32(#fnt) .. F.le32(fat_off) .. F.le32(8 * #file_list)
+  header = header .. string.rep("\0", header_size - #header)
+  return header .. fnt .. table.concat(fat) .. table.concat(data)
+end
+
 return F

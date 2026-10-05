@@ -408,3 +408,53 @@ T.test("Lobby: unbekannte Vorlage -> Hinweis, kein Start", function()
   T.eq(#outbox(mem), before)
   T.ok(app.messages[#app.messages].text:find("Gibtsnicht"))
 end)
+
+T.test("Level-Cap, Sonderbonbons und Namen/Typen aus der ROM im Prüfzyklus", function()
+  local GDT = require("mem.gamedata_test")
+  local GD = require("mem.gamedata")
+  local profile = {
+    game_code = "TEST", name = "Testspiel", gen = 4,
+    addresses = {
+      party = { addr = 0x02002000, tested = true },
+      party_count = { rel = "party", offset = -4, width = 32, tested = true },
+      bag_items = { addr = 0x02005000, slots = 10, tested = true },
+    },
+    gym_levels = { 14, 22, tested = true },
+    items = { rare_candy = 50 },
+    gamedata = GDT.CFG,
+  }
+  package.loaded["profiles.TEST"] = profile
+  local emu = Emu.fake({ game_code = "TEST" })
+  local mem = FS.memory()
+  local cfg = { mode = "solo", player_name = "Tom", lobby_code = "X", write_enabled = true, hotkeys = {},
+    lobby_settings = { preset = "klassisch" } }
+  local app = App.new({ config = cfg, emu = emu, fs = mem, root = "/proj", now = function() return 1000 end,
+    rom = GDT.fake_rom() })
+  T.ok(app.gamedata, "Spieldaten geladen")
+  -- Bisasam (Art 1, mittellangsam) Level 14 mit zu viel Erfahrung
+  local b = {}
+  for i = 1, 236 do b[i] = 0 end
+  P.set_u32(b, 0, 99991)
+  P.set_u16(b, 0x08, 1)
+  P.set_u32(b, 0x10, GD.exp_for_level(3, 15) - 1)
+  b[0x8C + 1] = 14
+  P.set_u16(b, 0x8E, 30)
+  P.set_u16(b, 0x90, 40)
+  P.set_u16(b, 0x06, P.checksum(b))
+  emu.write32(0x02002000 - 8, 6)
+  emu.write32(0x02002000 - 4, 1)
+  write_bytes(emu, 0x02002000, P.encrypt(b))
+  for _ = 1, 30 do app:tick() end
+  local m = P.parse(P.decrypt(emu.read_bytes(0x02002000, 236)), 4)
+  T.eq(m.exp, GD.exp_for_level(3, 14), "Erfahrung auf Level 14 gedeckelt")
+  T.ok(m.valid)
+  -- Sonderbonbons im Beutel
+  T.eq(emu.read16(0x02005000), 50)
+  T.eq(emu.read16(0x02005002), 999)
+  -- Name und Typen aus der ROM in Zustand und Gruppen-Ansicht
+  local st = app.client.state
+  local mon = st.players.tom.mons[m.uid]
+  T.eq(mon.species_name, "Bisasam")
+  T.eq(mon.types, { "Pflanze", "Gift" })
+  T.eq(mon.family, 1)
+end)

@@ -61,6 +61,18 @@ return {
     -- Noch offen (keine Quelle): Spielzeit, Boxen, Spieldaten-Tabellen (Artnamen, Gebietsnamen).
   },
 
+  -- Spieldaten aus der eigenen ROM (rom_path). Pfade und Textbank-Nummern aus Werkzeugen für die US-Version,
+  -- ungeprüft – check.lua zeigt Beispiele zur Kontrolle.
+  gamedata = {
+    personal_narc = "poketool/personal/pl_personal.narc",
+    evo_narc = "poketool/personal/evo.narc",
+    msg_narc = "msgdata/pl_msg.narc",
+    texts = { species = 412, types = 624 },
+  },
+
+  -- Item-Nummern (Gen 4): Sonderbonbon = 50. getestet: nein
+  items = { rare_candy = 50 },
+
   -- Randomizer (Phase 5). Pfad und Format aus Erinnerung an die DPPt-Struktur, ungeprüft (TESTEN.md).
   randomizer = {
     encounter_narc = "fielddata/encountdata/pl_enc_data.narc",

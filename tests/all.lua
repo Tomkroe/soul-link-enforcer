@@ -15,6 +15,8 @@ return {
   "mem.detect_test",
   "mem.finder_test",
   "mem.reader_test",
+  "mem.gamedata_test",
+  "mem.bag_test",
   "rando.prng_test",
   "rando.mapping_test",
   "rando.encounters_test",

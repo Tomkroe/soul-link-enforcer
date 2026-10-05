@@ -25,6 +25,7 @@ function Reader.new(opts)
   self.emu = opts.emu
   self.guard = opts.guard
   self.names = opts.names or function() return nil end
+  self.gamedata = opts.gamedata -- optional: Spieldaten aus der ROM (Typen, Entwicklungsreihen, Namen)
   self.gen = opts.profile.gen
   self.party_size = P.PARTY_SIZE[self.gen]
   self.party_slots = {}   -- uid -> Slot (für Schreibzugriffe)
@@ -131,12 +132,24 @@ function Reader:read_party()
     local plain = P.decrypt(raw)
     local m = P.parse(plain, self.gen)
     if m.valid and m.species ~= 0 then
-      m.species_name = self.names(m.species)
+      self:enrich(m)
       party[#party + 1] = m
       self.party_slots[m.uid] = i
     end
   end
   return party
+end
+
+--- Name, Typen und Entwicklungsreihe aus den Spieldaten ergänzen (falls geladen).
+function Reader:enrich(m)
+  m.species_name = self.names(m.species)
+  local gd = self.gamedata
+  if gd then
+    m.species_name = m.species_name or gd:species_name(m.species)
+    m.types = gd:types(m.species)
+    m.family = gd:family(m.species)
+  end
+  return m
 end
 
 function Reader:read_box()
@@ -149,7 +162,7 @@ function Reader:read_box()
     local raw = self.emu.read_bytes(base + i * P.BOX_SIZE, P.BOX_SIZE)
     if not (raw[1] == 0 and raw[2] == 0 and raw[3] == 0 and raw[4] == 0 and raw[7] == 0 and raw[8] == 0) then
       local m = P.parse(P.decrypt(raw), self.gen)
-      if m.valid and m.species ~= 0 then out[#out + 1] = m end
+      if m.valid and m.species ~= 0 then out[#out + 1] = self:enrich(m) end
     end
   end
   return out
@@ -176,7 +189,9 @@ function Reader:read_battle()
     local plain = P.decrypt(self.emu.read_bytes(enemy, self.party_size))
     local ok, m = Finder.plausible_mon(plain, self.gen)
     if ok then
-      battle.opponent = { species = m.species, level = m.level, shiny = m.shiny, species_name = self.names(m.species) }
+      self:enrich(m)
+      battle.opponent = { species = m.species, level = m.level, shiny = m.shiny, species_name = m.species_name,
+        family = m.family, types = m.types }
     end
   end
   return battle
@@ -240,6 +255,32 @@ function Reader:diagnose()
     end
   end
   return out
+end
+
+--- Schreibt einen geänderten Team-Datensatz zurück (über den Schreibschutz). change: Funktion(plain) -> plain
+function Reader:update_party_mon(uid, change, in_battle)
+  local slot = self.party_slots[uid]
+  if not slot then return false, "nicht im Team" end
+  local ok, reason = self.guard:can_write("party", in_battle)
+  if not ok then return false, reason end
+  local base = self.party_addr
+  if not base then return false, "Team-Adresse unbekannt" end
+  local base_off = slot * self.party_size
+  local plain = P.decrypt(self.emu.read_bytes(base + base_off, self.party_size))
+  if P.parse(plain, self.gen).uid ~= uid then return false, "Slot hat sich geändert" end
+  return self.guard:write_bytes("party", base_off, P.encrypt(change(plain)), in_battle)
+end
+
+--- Erfahrung deckeln (Level-Cap).
+function Reader:cap_exp(uid, max_exp)
+  return self:update_party_mon(uid, function(plain) return P.cap_exp(plain, max_exp) end, false)
+end
+
+--- Rohbytes eines Profileintrags lesen.
+function Reader:read_entry_bytes(name, len)
+  local a = self:addr(name)
+  if not a then return nil end
+  return self.emu.read_bytes(a, len), a
 end
 
 --- Setzt die KP eines Team-Monsters (über den Schreibschutz). Rückgabe: ok, Grund

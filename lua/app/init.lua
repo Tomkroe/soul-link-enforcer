@@ -19,6 +19,9 @@ local Automation = require("app.automation")
 local LocalHub = require("net.local_hub")
 local Rando = require("rando")
 local Export = require("core.export")
+local GameData = require("mem.gamedata")
+local RomFS = require("rando.romfs")
+local Bag = require("mem.bag")
 
 local App = {}
 App.__index = App
@@ -120,11 +123,26 @@ function App.new(opts)
     write_name = function(name) return self:write_trainer_name(name) end,
   })
 
+  -- Eigene ROM (nur lesen) für Spieldaten und Randomizer
+  self.rom_opt = opts.rom
+  if self.profile and self.profile.gamedata then
+    local rom = self:rom()
+    if rom then
+      local ok, gd, err = pcall(GameData.load, rom, self.profile.gamedata, self.profile.gen)
+      if ok and gd then
+        self.gamedata = gd
+        self.reader.gamedata = gd
+      else
+        self.warnings[#self.warnings + 1] = "Spieldaten nicht gelesen: " .. tostring(ok and err or gd)
+      end
+    end
+  end
+
   -- Randomizer (Phase 5)
   if self.profile then
     self.rando = Rando.new({
       profile = self.profile, emu = self.emu, guard = self.guard, reader = self.reader, fs = self.fs,
-      local_dir = local_dir, rom_path = cfg.rom_path, rom = opts.rom,
+      local_dir = local_dir, rom_path = cfg.rom_path, rom = self:rom(),
       note = function(text, level) self:note(text, level) end,
       backup = function() self.backup:before_first_write(self.snap and self.snap.badges) end,
     })
@@ -140,6 +158,76 @@ function App.new(opts)
     self.warnings[#self.warnings + 1] = "Sicherungen aus: save_path in config.lua fehlt"
   end
   return self
+end
+
+--- Eigene ROM öffnen (einmal, nur lesen). nil, wenn kein Pfad gesetzt oder nicht lesbar.
+function App:rom()
+  if self.rom_opt then return self.rom_opt end
+  if self.rom_tried then return self.rom_cache end
+  self.rom_tried = true
+  local path = self.cfg.rom_path
+  if not path or path == "" then return nil end
+  local ok, rom, err = pcall(RomFS.open_file, path)
+  if ok and rom then
+    self.rom_cache = rom
+  else
+    self.warnings[#self.warnings + 1] = "ROM nicht lesbar: " .. tostring(ok and err or rom)
+  end
+  return self.rom_cache
+end
+
+--- Aktuelles Level-Cap (Zahl) oder nil.
+function App:level_cap()
+  local state, pid = self.client.state, self:pid()
+  if not (state and pid and state.players[pid] and self.profile and self.profile.gym_levels) then return nil end
+  return R.level_cap(state, pid, self.profile.gym_levels)
+end
+
+--- Regeln mit Schreibzugriff außerhalb von Kämpfen: Level-Cap (3.6), Sonderbonbons (3.7), Folgemodus (6.5).
+function App:enforce_extras(state, snap)
+  if not (snap and snap.party and not snap.battle and state and state.phase == "running") then return end
+  local s = state.settings
+  -- Level-Cap: Erfahrung auf das Cap-Level deckeln; über dem Cap nur melden (Level lassen sich nicht senken)
+  local cap = self:level_cap()
+  if s.level_cap and cap and self.gamedata then
+    self.over_cap = self.over_cap or {}
+    for _, m in ipairs(snap.party) do
+      local max_exp = self.gamedata:cap_exp(m.species, cap)
+      if max_exp and m.exp > max_exp and m.level <= cap then
+        if self.guard:can_write("party") then
+          self.backup:before_first_write(snap.badges)
+          self.reader:cap_exp(m.uid, max_exp)
+        end
+      end
+      if m.level > cap and not self.over_cap[m.uid] then
+        self.over_cap[m.uid] = true
+        self:note((m.species_name or ("Art " .. m.species)) .. " ist über dem Level-Cap (" .. m.level .. " > " .. cap .. ").", "warn")
+      end
+    end
+  end
+  -- Sonderbonbons: 999 Stück, nachgefüllt (alle 30 Prüfzyklen)
+  local item = self.profile and self.profile.items and self.profile.items.rare_candy
+  local e = self.profile and self.profile.addresses.bag_items
+  if s.rare_candies and item and e and self.tick_no % 30 == 0 and self.guard:can_write("bag_items") then
+    local bytes, addr = self.reader:read_entry_bytes("bag_items", (e.slots or 0) * 4)
+    if bytes then
+      local new, err = Bag.ensure_item(bytes, e.slots, item, 999)
+      if new then
+        self.backup:before_first_write(snap.badges)
+        self.guard:write_bytes_at("bag_items", addr, new)
+      elseif err and not self.bag_full_noted then
+        self.bag_full_noted = true
+        self:note("Sonderbonbons: " .. err, "warn")
+      end
+    end
+  end
+  -- Folgemodus: Kampfstil-Bit in den Optionen halten
+  local o = self.profile and self.profile.addresses.options
+  if s.follow_mode and o and o.battle_style_bit and self.guard:can_write("options") then
+    local v = self.reader:read("options", o.width or 16)
+    local nv = v and Bag.ensure_bit(v, o.battle_style_bit, o.follow_value == 1)
+    if nv then self.guard:write("options", 0, o.width or 16, nv) end
+  end
 end
 
 --- Spielername aus config.lua in den Spielstand schreiben (nur über den Schreibschutz).
@@ -344,6 +432,9 @@ function App:tick()
     if not ok then self:note("Randomizer-Fehler: " .. tostring(err), "warn") end
   end
 
+  local ok_x, err_x = pcall(self.enforce_extras, self, state, snap)
+  if not ok_x then self:note("Fehler bei Level-Cap/Beutel: " .. tostring(err_x), "warn") end
+
   if snap and self.profile then
     self.auto:prologue_tick(self:setting("skip_prologue"), snap, self.cfg.player_name)
     self.auto:nickname_tick(self:setting("skip_nickname"))
@@ -401,11 +492,8 @@ function App:lines()
   for _, m in ipairs(self.messages) do
     if now - m.t < App.MESSAGE_MS then msgs[#msgs + 1] = m end
   end
-  local cap
-  if state and pid and self.profile and self.profile.gym_levels then
-    cap = R.level_cap(state, pid, self.profile.gym_levels)
-    if cap and self.profile.gym_levels.tested ~= true then cap = cap .. " (ungeprüft)" end
-  end
+  local cap = self:level_cap()
+  if cap and self.profile.gym_levels.tested ~= true then cap = cap .. " (ungeprüft)" end
   local lines = Overlay.lines({
     state = state, pid = pid, net_status = self.client:status_text(), online = self.client:online(),
     read_only = self.read_only, profile_msg = self.profile_msg, warnings = self.warnings,
