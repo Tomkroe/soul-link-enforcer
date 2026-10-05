@@ -1,0 +1,21 @@
+{
+  "port": 8080,
+  "host": "0.0.0.0",
+  "storage": {
+    "type": "file",
+    "dir": "./server/data"
+  },
+  "heartbeat_timeout_s": 20,
+  "save_delay_ms": 1000,
+  "serve_web": true,
+  "discord": {
+    "webhook_url": "",
+    "events": {
+      "death": true,
+      "group": true,
+      "badge": true,
+      "run_start": true,
+      "run_end": true
+    }
+  }
+}
