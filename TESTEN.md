@@ -43,6 +43,14 @@ Das Profil `lua/profiles/CPUD.lua` enthält Kandidaten aus Werkzeugen für die U
       ungleich 0 bei Trainerkampf. Steht dort „nil“ oder ändert sich nichts → Adresse der deutschen Version fehlt.
 - [ ] Werte, die stimmen, in `CPUD.lua` auf `tested = true` setzen (nur Lese-Einträge; `party` erst nach Abschnitt 3).
 
+## 0c. Ein-Befehl-Start und Hilfsbefehle (Windows)
+
+- [ ] `winget install --id Cloudflare.cloudflared`, dann Doppelklick `Server mit Tunnel starten.cmd` → Ausgabe zeigt
+      `server_url = "wss://….trycloudflare.com/ws"`; Run-Übersicht über die angezeigte Adresse erreichbar.
+- [ ] Ohne cloudflared: klare Meldung, Server läuft lokal weiter.
+- [ ] `Sicherung zurueckspielen.cmd`: Liste erscheint; eine Nummer eingeben → Datei zurückgespielt, alte Datei als
+      `.vor-wiederherstellung-…` daneben.
+
 ## 1. Lesen (Profil anlegen, siehe README „Neues Profil anlegen“)
 
 Für jede Adresse im Profil. Erst danach `tested = true` setzen, Schreib-Adressen erst nach Abschnitt 3.

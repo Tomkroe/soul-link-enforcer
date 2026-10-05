@@ -87,7 +87,7 @@ backups = { save_path = "C:/DeSmuME/Battery/Pokemon Platin.dsv" },
 ### IntelliJ
 
 Das Projekt lässt sich direkt als Ordner öffnen. Unter `.run/` liegen Startkonfigurationen
-(„Server starten“, „Alle Tests“, „Lua-Tests“, „Server-Tests“, „Brücke (lokal)“). Sie nutzen npm und
+(„Server starten“, „Server mit Tunnel“, „Alle Tests“, „Lua-Tests“, „Server-Tests“, „Brücke (lokal)“). Sie nutzen npm und
 brauchen das JavaScript/Node.js-Plugin (in IntelliJ IDEA Ultimate enthalten). In der Community-Edition
 dieselben Befehle im Terminal ausführen (`npm start`, `npm test`).
 
@@ -112,7 +112,8 @@ Ohne Server gibt es keine Run-Übersicht im Browser und keine Discord-Meldungen.
 
 ## Server starten
 
-Einer betreibt den Server, die anderen verbinden sich. Auf dem eigenen PC:
+Einer betreibt den Server, die anderen verbinden sich. Auf dem eigenen PC (oder Doppelklick auf
+`Server starten.cmd`):
 
 ```
 npm start
@@ -142,15 +143,17 @@ Es gibt zwei Wege, beide ohne Codeänderung.
 
 Kein Konto nötig, kein Router-Umbau. Die Adresse ändert sich bei jedem Start des Tunnels.
 
-1. `cloudflared` installieren:
+1. `cloudflared` einmal installieren:
    <https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/>
    (unter Windows z. B. `winget install --id Cloudflare.cloudflared`).
-2. Server starten: `npm start`
-3. In einem zweiten Terminal: `cloudflared tunnel --url http://localhost:8080`
-4. In der Ausgabe steht eine Adresse wie `https://irgendwas-zufaellig.trycloudflare.com`.
-5. Diese Adresse an die Mitspieler geben. In deren `config.lua` steht dann
-   `server_url = "wss://irgendwas-zufaellig.trycloudflare.com/ws"` (Achtung: `wss://` statt `https://`, `/ws` am Ende).
-6. Run-Übersicht für alle: `https://irgendwas-zufaellig.trycloudflare.com/`
+2. **Ein Befehl:** `npm run tunnel` (oder Doppelklick auf `Server mit Tunnel starten.cmd`). Das startet Server und
+   Tunnel und gibt fertig aus:
+   - die Zeile für die `config.lua` aller Spieler, z. B. `server_url = "wss://irgendwas-zufaellig.trycloudflare.com/ws"`,
+   - die Adresse der Run-Übersicht und des Todesprotokolls.
+3. Die `server_url`-Zeile an die Mitspieler geben.
+
+Von Hand geht es auch: `npm start` und in einem zweiten Terminal `cloudflared tunnel --url http://localhost:8080`
+(dann `https://` durch `wss://` ersetzen und `/ws` anhängen).
 
 Der Server-PC muss während des Spielens laufen. Die Daten liegen in `server/data/`.
 
@@ -405,7 +408,17 @@ Das Script legt Kopien der Speicherdatei an (vor dem ersten Schreibzugriff jeder
 neuen Orden, alle 15 Minuten) und behält die letzten 20. Sie liegen in `backups/`, Namensschema
 `<Datum>_<Uhrzeit>_orden<N>_<Grund>.dsv`. Voraussetzung: `backups.save_path` in `config.lua`.
 
-Zurückspielen:
+Zurückspielen per Befehl (empfohlen):
+
+1. DeSmuME schließen.
+2. `npm run restore` (oder Doppelklick auf `Sicherung zurueckspielen.cmd`) listet die Sicherungen, die neueste
+   zuerst, mit Nummer.
+3. `npm run restore -- 3` spielt Nr. 3 zurück. Die bisherige Speicherdatei wird vorher als
+   `<Name>.vor-wiederherstellung-<Zeit>` aufbewahrt.
+4. Spiel starten und laden. Der Server bemerkt den älteren Stand (Spielzeit/Orden) und meldet ihn allen.
+   Der Server-Zustand (Tote, Gruppen) bleibt gültig.
+
+Von Hand:
 
 1. DeSmuME schließen (oder das Spiel beenden), damit die Speicherdatei nicht überschrieben wird.
 2. Die aktuelle Speicherdatei (z. B. `C:/DeSmuME/Battery/Pokemon Platin.dsv`) zur Sicherheit umbenennen.

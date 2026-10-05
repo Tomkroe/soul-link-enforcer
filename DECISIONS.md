@@ -243,3 +243,17 @@ Teams kommen zusätzlich Ausscheiden und Ziel-Erreichen je Team.
 - **Überleben:** Ziel erreicht zählt als höchster Fortschritt, sonst Ø Orden; bei Gleichstand weniger Tode. Die
   Reihenfolge des Erreichens zählt nicht. Sieger = Platz 1, auch wenn alle ausgeschieden sind.
 - „Lebende Monster“ in der Rangliste sind lebende Gruppenmitglieder (freie Schillernde zählen nicht).
+
+## E26 – Ein Befehl für Server und Tunnel, Hilfsbefehle für Windows (05.10.2026)
+
+`npm run tunnel` startet den Server im selben Prozess und `cloudflared` als Kindprozess. Die öffentliche Adresse wird
+aus dessen Ausgabe gelesen und gleich als `server_url`-Zeile für `config.lua` ausgegeben. Fehlt cloudflared, läuft
+der Server lokal weiter und die Installation wird erklärt (keine globale Installation durch das Projekt).
+`npm run restore` spielt Sicherungen zurück und bewahrt die bisherige Speicherdatei auf. `.cmd`-Dateien zum
+Doppelklicken rufen nur diese Befehle auf. `.gitattributes` sorgt für Windows-Zeilenenden in `.cmd`-Dateien.
+
+## E27 – Boxen mit Zwischenspeicher (05.10.2026)
+
+Pro Box-Platz werden nur PID und Prüfsumme gelesen; ganz gelesen und entschlüsselt wird ein Platz nur, wenn sich
+diese ändern. Ohne Zwischenspeicher wären es über 70.000 Speicherzugriffe und 540 Entschlüsselungen pro Durchgang,
+was in DeSmuME (reines Lua, keine Bit-Operatoren) spürbar ruckeln würde.

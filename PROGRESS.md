@@ -21,7 +21,7 @@ lässt. Phase 0 und alles mit Speicheradressen ist übersprungen, die Schnittste
 
 | Bereich | Inhalt | Tests |
 |---|---|---|
-| Projektgerüst | Ordnerstruktur, `package.json`, IntelliJ-Startkonfigurationen (`.run/`), CI (GitHub Actions, Lua 5.1 + fengari), Pages-Workflow, Render-Blueprint | – |
+| Projektgerüst | Ordnerstruktur, `package.json`, IntelliJ-Startkonfigurationen (`.run/`), CI (GitHub Actions, Lua 5.1 + fengari), Pages-Workflow, Render-Blueprint, `npm run tunnel` (Server + Tunnel in einem Befehl), `npm run restore`, Windows-Startdateien | `scripts/test` |
 | `lua/lib` | JSON (deterministisch), Bit-Operationen ohne native Operatoren | `tests/lib` |
 | `lua/core` | Zustandsmodell, Reducer, Abfragen: Lobby (1–4 Spieler, Einstellungen, Vorlagen, Teams), Link-Gruppen, Gebietsverbrauch, gekoppelter Tod, Team-Prüfung (Regeln 4/5), Level-Cap-Abfrage, Run verloren/gewonnen, **Aufhol-Modus** komplett (Orden-Sperre, Fang-Sperre, Abwesenheitsliste), Savestate-Erkennung, Abstimmungen (Einstellungen, Zähler zurücksetzen, aufgeben), Duplikat-/Schillernd-Klausel, Schonfrist, Wettkampf-Teams mit Rangliste | `tests/core`: jede Regel für 1, 2, 3 und 4 Spieler, Aufhol-Modus mit 2/3/4 Spielern, 2v2 und 1v1 |
 | `server/` | Lobby per Code, Lua-Engine über fengari, Herzschlag (offline nach 20 s), Wiedereinstieg mit Sequenznummern, Speicherung als JSON (Datei oder Upstash), Statistik dauerhaft und lobbyübergreifend, Discord-Webhook (je Art abschaltbar), Zuschauer schreibgeschützt, eigene Vorlagen speichern, liefert die Run-Übersicht aus | `server/test`: inkl. Neustart-Persistenz, Herzschlag, Abwesenheitsliste |
@@ -109,6 +109,9 @@ Handicap-Ereignisse, Zeitleiste, Protokoll von Regelverstößen. Das Verstoß-Pr
 
 ## Verlauf
 
+- 05.10.2026 (10): Boxen mit Zwischenspeicher (Leistung in DeSmuME), `npm run tunnel` (Server + Tunnel in einem
+  Befehl, Adresse für config.lua), `npm run restore` (Sicherung zurückspielen), Windows-Startdateien,
+  Lua-5.1-Verträglichkeit geprüft.
 - 05.10.2026 (9): Phase 8 abgeschlossen: Wertung Überleben, Teamgrößen im Wettkampf, Live-Rangliste im
   Overlay (lebende Monster), Run-Start nennt Teams, Lobby-Hinweis, Spielende-Merkmal im Leser.
 - 05.10.2026 (8): Phase 7 abgeschlossen: vollständige Vorlagen, Run-Statistik (Endbildschirm, Discord,

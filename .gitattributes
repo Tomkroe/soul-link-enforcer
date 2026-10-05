@@ -1,0 +1,4 @@
+*.cmd text eol=crlf
+*.lua text eol=lf
+*.js text eol=lf
+*.md text eol=lf
