@@ -46,7 +46,9 @@ local function make_app(opts)
   local launched = {}
   local cfg = {
     player_name = "Anna", lobby_code = "ABC", server_url = "wss://x/ws", write_enabled = opts.write ~= false,
-    bridge = { autostart = true }, hotkeys = { overlay = "O", confirm = "J", graveyard = "F", areas = "G", pc_pass = "P" },
+    bridge = { autostart = true }, hotkeys = { overlay = "O", confirm = "J", graveyard = "F", areas = "G", pc_pass = "P",
+      start = "N", vote_yes = "Y", vote_no = "U" },
+    lobby_settings = { preset = "hardcore" },
     backups = { save_path = "save.dsv", dir = "bk" },
   }
   mem.files["save.dsv"] = "SAVE"
@@ -233,6 +235,43 @@ T.test("Overlay per Taste ein- und ausblenden", function()
   T.ok(app.show.overlay)
   app:draw()
   T.ok(#emu.texts > 0)
+end)
+
+T.test("Lobby: Run per Taste starten, Einstellungen aus config.lua", function()
+  local app, emu, mem = make_app()
+  local E = require("core.engine")
+  local st = E.new_state("ABC")
+  E.apply(st, { type = "join", player = "anna", t = 1 })
+  deliver(app, mem, { { op = "welcome", player = "anna", last_seq = 0 }, { op = "state", state = st } })
+  app:tick()
+  local found = false
+  for _, l in ipairs(app:lines()) do if l.text:find("Run starten") then found = true end end
+  T.ok(found)
+  emu.pressed = { N = true }
+  app:frame()
+  local sent = outbox(mem)
+  T.eq(sent[#sent - 1].event.type, "set_settings")
+  T.eq(sent[#sent - 1].event.preset, "hardcore")
+  T.eq(sent[#sent].event.type, "start_run")
+end)
+
+T.test("Abstimmung per Taste", function()
+  local app, emu, mem = make_app()
+  local H = require("core.helpers")
+  local s = H.run(2)
+  s:ok("propose", "ben", { kind = "reset_counters" })
+  s.state.players.anna = s.state.players.anna -- anna ist der Script-Spieler
+  deliver(app, mem, { { op = "welcome", player = "anna", last_seq = 0 }, { op = "state", state = s.state } })
+  app:tick()
+  local found = false
+  for _, l in ipairs(app:lines()) do if l.text:find("Abstimmung: Todeszähler zurücksetzen") then found = true end end
+  T.ok(found)
+  emu.pressed = { Y = true }
+  app:frame()
+  local sent = outbox(mem)
+  T.eq(sent[#sent].event.type, "vote")
+  T.eq(sent[#sent].event.accept, true)
+  T.eq(sent[#sent].event.id, "v1")
 end)
 
 T.test("Selbsttest der Schreibfunktionen", function()

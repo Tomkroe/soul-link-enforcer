@@ -1,0 +1,17 @@
+# Render-Blueprint für den Vermittlungsserver (kostenloser Tarif).
+# Dauerhafter Speicher über Upstash Redis (kostenlos), weil das Dateisystem bei Render Free flüchtig ist.
+services:
+  - type: web
+    name: soul-link-server
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
+      - key: DISCORD_WEBHOOK_URL
+        sync: false

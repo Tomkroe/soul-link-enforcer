@@ -139,11 +139,40 @@ function App:handle_keys()
     self.absence = nil
     self.client:send_event({ type = "ack_absence" })
   end
+  local state = self.client.state
+  if self:key_pressed(hk.start) and state then
+    if state.phase == "lobby" then
+      local ls = self.cfg.lobby_settings
+      if ls and (ls.preset or ls.changes) then
+        self.client:send_event({ type = "set_settings", preset = ls.preset, changes = ls.changes })
+      end
+      self.client:send_event({ type = "start_run" })
+      self:note("Run-Start angefordert.")
+    elseif state.phase == "finished" then
+      self.client:send_event({ type = "new_attempt" })
+      self:note("Neuer Versuch angefordert – zurück in die Lobby.")
+    end
+  end
+  local prop = self:open_proposal()
+  if prop and (self:key_pressed(hk.vote_yes) or self:key_pressed(hk.vote_no)) then
+    self.client:send_event({ type = "vote", id = prop.id, accept = self:key_pressed(hk.vote_yes) and true or false })
+  end
   if self:key_pressed(hk.pc_pass) then
     self.override_until = self.now() + 30000
     self:note("Sperre für 30 s ausgesetzt (Weg zum PC).", "warn")
   end
   self.prev_keys = self.keys
+end
+
+--- Älteste offene Abstimmung, bei der man selbst noch nicht zugestimmt hat.
+function App:open_proposal()
+  local state, pid = self.client.state, self:pid()
+  if not state or not pid then return nil end
+  local best
+  for _, prop in pairs(state.proposals or {}) do
+    if not prop.votes[pid] and (not best or prop.created_at < best.created_at) then best = prop end
+  end
+  return best
 end
 
 --- Ein Prüfzyklus: Netz, Spielzustand lesen, Ereignisse melden, Regeln durchsetzen.
@@ -217,6 +246,18 @@ function App:lines()
     stats = self.client.stats, lock_reasons = self.plan and self.plan.lock and self.plan.reasons or nil,
     messages = msgs, level_cap = cap, compact = self.cfg.overlay and self.cfg.overlay.compact,
   })
+  local hk = self.cfg.hotkeys or {}
+  if state and state.phase == "lobby" then
+    lines[#lines + 1] = { text = "Taste " .. tostring(hk.start) .. ": Run starten (Einstellungen aus config.lua)", color = "gelb" }
+  elseif state and state.phase == "finished" then
+    lines[#lines + 1] = { text = "Taste " .. tostring(hk.start) .. ": neuer Versuch", color = "gelb" }
+  end
+  local prop = self:open_proposal()
+  if prop then
+    local names = { settings = "Einstellungen ändern", reset_counters = "Todeszähler zurücksetzen", abandon = "Run aufgeben" }
+    lines[#lines + 1] = { text = "Abstimmung: " .. (names[prop.kind] or prop.kind) .. " – " .. tostring(hk.vote_yes)
+      .. " = ja, " .. tostring(hk.vote_no) .. " = nein", color = "gelb" }
+  end
   if self.absence then
     lines[#lines + 1] = { text = "In deiner Abwesenheit gestorben:", color = "rot" }
     for _, d in ipairs(self.absence) do

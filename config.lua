@@ -25,7 +25,15 @@ return {
     areas = "G",        -- Gebiets-Übersicht
     confirm = "J",      -- Abwesenheitsliste bestätigen
     pc_pass = "P",      -- Sperre 30 s aussetzen, um zum PC zu laufen
+    start = "N",        -- Lobby: Run starten / nach Run-Ende: neuer Versuch
+    vote_yes = "Y",     -- offene Abstimmung annehmen
+    vote_no = "U",      -- offene Abstimmung ablehnen
   },
+
+  -- Einstellungen, die beim Run-Start (Taste N) für alle gesetzt werden.
+  -- Vorlagen: "locker", "klassisch", "hardcore". Einzelne Schalter danach in changes, z. B.
+  -- changes = { level_cap = false, goal = { kind = "orden", value = 8 } }
+  lobby_settings = { preset = "klassisch", changes = nil },
 
   overlay = { x = 2, y = 2, compact = false },
 
