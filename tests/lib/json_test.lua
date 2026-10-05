@@ -38,3 +38,13 @@ T.test("Zyklus wird erkannt", function()
   a.self = a
   T.raises(function() json.encode(a) end, "zyklisch")
 end)
+
+T.test("Aus [] dekodierte Tabelle mit später ergänzten Schlüsseln wird als Objekt gespeichert", function()
+  local t = json.decode('{"a":[]}')
+  t.a.erster = 5
+  T.eq(json.encode(t), '{"a":{"erster":5}}')
+  local l = json.decode("[]")
+  l[1] = "x"
+  T.eq(json.encode(l), '["x"]')
+  T.eq(json.encode(json.decode('{"b":[]}')), '{"b":[]}')
+end)

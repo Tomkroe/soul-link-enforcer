@@ -52,8 +52,10 @@ end
 
 local function is_array(t)
   local k = kind_of(t)
-  if k == "array" then return true end
   if k == "object" then return false end
+  -- Auch eine als Array markierte Tabelle (z. B. aus einem dekodierten []) wird zum Objekt, sobald sie
+  -- Textschlüssel bekommt – sonst gingen später ergänzte Einträge beim Speichern verloren.
+  if k == "array" and next(t) == nil then return true end
   local n = 0
   for key in pairs(t) do
     if type(key) ~= "number" or key < 1 or math.floor(key) ~= key then return false end
