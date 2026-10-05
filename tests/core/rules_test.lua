@@ -1,0 +1,382 @@
+-- Regeln 1–5 und 8 für 1, 2, 3 und 4 Spieler pro Gruppe.
+local T = require("lib.t")
+local H = require("core.helpers")
+local R = require("core.rules")
+
+for n = 1, 4 do
+  local tag = " [" .. n .. " Spieler]"
+
+  T.test("Link-Gruppe entsteht aus dem ersten Fang jedes Spielers" .. tag, function()
+    local s = H.run(n)
+    for i, pid in ipairs(s.players) do
+      s:ok("catch", pid, { uid = pid .. "-a", species = 1, species_name = "Art", area = H.AREA1 })
+      local g = s:team("anna").groups.g1
+      T.eq(g.status, i == n and "komplett" or "offen", "Status nach " .. i .. " Fängen")
+    end
+    local g = s:team("anna").groups.g1
+    for _, pid in ipairs(s.players) do
+      T.eq(g.members[pid], pid .. "-a")
+      T.eq(s:mon(pid, pid .. "-a").group, "g1")
+    end
+    T.has(s.effects, { type = "discord", kind = "group" })
+    -- zweites Gebiet: neue Gruppe
+    H.catch_all(s, H.AREA2, "b")
+    T.eq(s:team("anna").group_order, { "g1", "g2" })
+  end)
+
+  T.test("Gekoppelter Tod: alle Gruppenmitglieder fallen" .. tag, function()
+    local s = H.run(n)
+    H.catch_all(s, H.AREA1, "a")
+    H.catch_all(s, H.AREA2, "b")
+    local eff = s:ok("faint", "anna", { uid = "anna-a", level = 12, opponent = "Rivale" })
+    T.eq(H.count(eff, { type = "kill" }), n)
+    for _, pid in ipairs(s.players) do
+      T.eq(s:mon(pid, pid .. "-a").status, "tot")
+      T.eq(s:mon(pid, pid .. "-b").status, "lebt")
+      T.has(eff, { type = "kill", player = pid, uid = pid .. "-a" })
+    end
+    T.eq(s:p("anna").deaths, 1)
+    T.eq(s:p("anna").dragged, 0)
+    for i = 2, n do
+      T.eq(s:p(s.players[i]).deaths, 0, "eigene Tode von " .. s.players[i])
+      T.eq(s:p(s.players[i]).dragged, 1, "mitgerissen bei " .. s.players[i])
+    end
+    T.eq(H.count(eff, { type = "stat", key = "deaths" }), 1)
+    T.eq(H.count(eff, { type = "stat", key = "dragged" }), n - 1)
+    T.eq(s:team("anna").groups.g1.status, "tot")
+    T.eq(#s:team("anna").graveyard, n)
+    local d = T.has(s:team("anna").graveyard, { player = "anna", cause = "eigener" })
+    T.eq(d.level, 12)
+    T.eq(d.opponent, "Rivale")
+    T.eq(d.area, "Route 201")
+    T.has(eff, { type = "discord", kind = "death" })
+    T.eq(s.state.phase, "running")
+    -- Wiederholte Meldung ändert nichts
+    eff = s:ok("faint", "anna", { uid = "anna-a" })
+    T.eq(#eff, 0)
+    T.eq(s:p("anna").deaths, 1)
+  end)
+
+  T.test("Tod eines Partners in offener Gruppe: späterer Fang ist sofort tot" .. tag, function()
+    if n == 1 then return end
+    local s = H.run(n)
+    H.catch_all(s, H.AREA3, "basis") -- eine lebende Gruppe, damit der Run weiterläuft
+    s:ok("catch", "anna", { uid = "anna-a", area = H.AREA1 })
+    s:ok("faint", "anna", { uid = "anna-a" })
+    T.eq(s:team("anna").groups.g2.status, "tot")
+    s:ok("catch", "ben", { uid = "ben-a", area = H.AREA1 })
+    T.eq(s:mon("ben", "ben-a").status, "tot")
+    T.eq(s:p("ben").deaths, 0)
+    T.has(s.effects, { type = "kill", player = "ben", uid = "ben-a" })
+  end)
+
+  T.test("Gebiet verbraucht: gefangene Mitglieder sterben, spätere Fänge sind tot" .. tag, function()
+    local s = H.run(n)
+    H.catch_all(s, H.AREA3, "basis")
+    -- Alle außer dem letzten fangen, der letzte verpasst
+    for i = 1, n - 1 do
+      s:ok("catch", s.players[i], { uid = s.players[i] .. "-a", area = H.AREA1 })
+    end
+    local last = s.players[n]
+    local eff = s:ok("encounter_failed", last, { area = H.AREA1, species = 5 })
+    local area = s:team("anna").areas["201"]
+    T.ok(area.consumed)
+    T.eq(area.consumed_by, last)
+    T.eq(H.count(eff, { type = "kill" }), n - 1)
+    for i = 1, n - 1 do
+      T.eq(s:mon(s.players[i], s.players[i] .. "-a").status, "tot")
+      T.eq(s:p(s.players[i]).deaths, 0, "Gebietsverbrauch zählt nicht als eigener Tod")
+    end
+    -- Jeder weitere Fang im verbrauchten Gebiet ist sofort tot
+    s:ok("catch", last, { uid = last .. "-x", area = H.AREA1 })
+    T.eq(s:mon(last, last .. "-x").status, "tot")
+    T.eq(s:mon(last, last .. "-x").cause, "gebiet_verbraucht")
+  end)
+
+  T.test("Zweiter Fang desselben Spielers im selben Gebiet ist tot" .. tag, function()
+    local s = H.run(n)
+    s:ok("catch", "anna", { uid = "anna-a", area = H.AREA1 })
+    s:ok("catch", "anna", { uid = "anna-z", area = H.AREA1 })
+    T.eq(s:mon("anna", "anna-a").status, "lebt")
+    T.eq(s:mon("anna", "anna-z").status, "tot")
+    T.eq(s:mon("anna", "anna-z").group, "")
+    -- Wiederholte Fangmeldung für dasselbe Monster bleibt wirkungslos
+    s:ok("catch", "anna", { uid = "anna-a", area = H.AREA1 })
+    T.eq(s:mon("anna", "anna-a").status, "lebt")
+  end)
+
+  T.test("Alle Gruppen tot: Run verloren mit Statistik" .. tag, function()
+    local s = H.run(n)
+    H.catch_all(s, H.AREA1, "a")
+    H.catch_all(s, H.AREA2, "b")
+    s:ok("faint", "anna", { uid = "anna-a" })
+    T.eq(s.state.phase, "running")
+    local eff = s:ok("faint", s.players[n], { uid = s.players[n] .. "-b" })
+    T.eq(s.state.phase, "finished")
+    T.eq(s.state.result, "verloren")
+    T.eq(s:team("anna").status, "verloren")
+    T.has(eff, { type = "discord", kind = "run_end" })
+    local h = s.state.history[1]
+    T.eq(h.result, "verloren")
+    T.eq(h.teams[1].groups, 2)
+    T.eq(h.players.anna.deaths, n == 1 and 2 or 1)
+    -- nach Run-Ende keine Spielereignisse mehr
+    T.has(s:ev("catch", "anna", { uid = "q", area = H.AREA3 }), { type = "error" })
+  end)
+
+  T.test("Team-Prüfung: tote Monster im Team, Team-Gleichheit" .. tag, function()
+    local s = H.run(n)
+    H.catch_all(s, H.AREA1, "a")
+    H.catch_all(s, H.AREA2, "b")
+    H.catch_all(s, H.AREA3, "c")
+    for _, pid in ipairs(s.players) do s:ok("party", pid, { mons = { pid .. "-a", pid .. "-b" } }) end
+    for _, pid in ipairs(s.players) do T.ok(R.team_check(s.state, pid).ok, "gleiches Team bei " .. pid) end
+
+    if n > 1 then
+      -- anna tauscht b gegen c
+      s:ok("party", "anna", { mons = { "anna-a", "anna-c" } })
+      local ca = R.team_check(s.state, "anna")
+      T.no(ca.ok)
+      T.eq(#ca.missing, 1)
+      T.eq(ca.missing[1].group, "g2")
+      T.eq(ca.missing[1].uid, "anna-b")
+      T.eq(#ca.extra, 1)
+      T.eq(ca.extra[1].group, "g3")
+      local cb = R.team_check(s.state, "ben")
+      T.no(cb.ok)
+      T.eq(cb.missing[1].group, "g3")
+      T.eq(cb.extra[1].group, "g2")
+      s:ok("party", "anna", { mons = { "anna-a", "anna-b" } })
+    end
+
+    -- Tod: tote Monster müssen aus dem Team
+    s:ok("faint", "anna", { uid = "anna-a" })
+    for _, pid in ipairs(s.players) do
+      local c = R.team_check(s.state, pid)
+      T.no(c.ok)
+      T.eq(#c.dead, 1)
+      T.eq(c.dead[1].uid, pid .. "-a")
+      T.eq(R.dead_uids(s.state, pid), { pid .. "-a" })
+    end
+    for _, pid in ipairs(s.players) do s:ok("party", pid, { mons = { pid .. "-b" } }) end
+    for _, pid in ipairs(s.players) do T.ok(R.team_check(s.state, pid).ok) end
+  end)
+
+  T.test("Team-Prüfung: offene Gruppen werden toleriert, unbekannte Monster nicht" .. tag, function()
+    local s = H.run(n)
+    s:ok("catch", "anna", { uid = "anna-a", area = H.AREA1 })
+    s:ok("party", "anna", { mons = { "anna-a" } })
+    local c = R.team_check(s.state, "anna")
+    if n == 1 then
+      T.ok(c.ok)
+      T.eq(#c.waiting, 0)
+    else
+      T.ok(c.ok)
+      T.eq(#c.waiting, 1)
+    end
+    s:ok("party", "anna", { mons = { "anna-a", { uid = "fremd", species_name = "Unbekannt", level = 7 } } })
+    c = R.team_check(s.state, "anna")
+    T.no(c.ok)
+    T.has(c.extra, { uid = "fremd", reason = "nicht verknüpft" })
+    T.eq(s:mon("anna", "fremd").status, "unbekannt")
+  end)
+end
+
+T.test("Unbekanntes Monster fällt: zählt als eigener Tod, kein Mitreißen", function()
+  local s = H.run(2)
+  s:ok("party", "anna", { mons = { { uid = "alt", species_name = "Altes", level = 9 } } })
+  local eff = s:ok("faint", "anna", { uid = "alt" })
+  T.eq(s:mon("anna", "alt").status, "tot")
+  T.eq(H.count(eff, { type = "kill" }), 1)
+  T.eq(s:p("anna").deaths, 1)
+end)
+
+T.test("Schonfrist: Tode vor den ersten Bällen zählen nicht", function()
+  local s = H.run(2, { balls = false })
+  H.catch_all(s, H.AREA1, "starter")
+  local eff = s:ok("faint", "anna", { uid = "anna-starter" })
+  T.eq(H.count(eff, { type = "kill" }), 0)
+  T.eq(s:mon("anna", "anna-starter").status, "lebt")
+  s:ok("status", "anna", { has_balls = true })
+  eff = s:ok("faint", "anna", { uid = "anna-starter" })
+  T.eq(H.count(eff, { type = "kill" }), 2)
+end)
+
+T.test("Ohne Schonfrist zählen Tode sofort", function()
+  local s = H.run(2, { balls = false, settings = { grace = false } })
+  H.catch_all(s, H.AREA1, "starter")
+  local eff = s:ok("faint", "anna", { uid = "anna-starter" })
+  T.eq(H.count(eff, { type = "kill" }), 2)
+end)
+
+T.test("Begegnungen ohne Bälle verbrauchen kein Gebiet", function()
+  local s = H.run(2, { balls = false })
+  s:ok("encounter_failed", "anna", { area = H.AREA1 })
+  T.no(s:team("anna").areas["201"].consumed)
+end)
+
+T.test("Duplikat-Klausel: Begegnung mit bekannter Entwicklungsreihe verbraucht nicht", function()
+  local s = H.run(2)
+  s:ok("catch", "anna", { uid = "anna-a", area = H.AREA1, family = 25 })
+  s:ok("catch", "ben", { uid = "ben-a", area = H.AREA1, family = 4 })
+  s:ok("encounter_failed", "anna", { area = H.AREA2, family = 25 })
+  T.no(s:team("anna").areas["202"].consumed)
+  s:ok("encounter_failed", "anna", { area = H.AREA2, family = 99 })
+  T.ok(s:team("anna").areas["202"].consumed)
+end)
+
+T.test("Duplikat-Klausel aus: Duplikat verbraucht das Gebiet", function()
+  local s = H.run(2, { settings = { dupes_clause = false } })
+  s:ok("catch", "anna", { uid = "anna-a", area = H.AREA1, family = 25 })
+  s:ok("encounter_failed", "anna", { area = H.AREA2, family = 25 })
+  T.ok(s:team("anna").areas["202"].consumed)
+end)
+
+T.test("Schillernd-Klausel: Fang zählt nicht, Fluchten auch nicht", function()
+  local s = H.run(2)
+  s:ok("catch", "anna", { uid = "shiny", area = H.AREA1, shiny = true })
+  T.eq(s:mon("anna", "shiny").status, "frei")
+  T.eq(s:team("anna").areas["201"].by.anna, nil)
+  s:ok("encounter_failed", "anna", { area = H.AREA1, shiny = true })
+  T.no(s:team("anna").areas["201"].consumed)
+  s:ok("catch", "anna", { uid = "anna-a", area = H.AREA1 })
+  T.eq(s:mon("anna", "anna-a").status, "lebt")
+  T.eq(s:mon("anna", "anna-a").group, "g1")
+  -- freie Monster dürfen ins Team
+  s:ok("catch", "ben", { uid = "ben-a", area = H.AREA1 })
+  s:ok("party", "anna", { mons = { "anna-a", "shiny" } })
+  s:ok("party", "ben", { mons = { "ben-a" } })
+  T.ok(R.team_check(s.state, "anna").ok)
+end)
+
+T.test("Geschenke zählen als Gebietsfang (Standard)", function()
+  local s = H.run(2)
+  s:ok("catch", "anna", { uid = "anna-ei", area = H.AREA1, gift = true })
+  T.eq(s:mon("anna", "anna-ei").group, "g1")
+end)
+
+T.test("Level-Cap aus dem Profil, abschaltbar", function()
+  local s = H.run(2)
+  local levels = { 14, 22, 30 }
+  T.eq(R.level_cap(s.state, "anna", levels), 14)
+  s:ok("status", "anna", { badges = 2 })
+  T.eq(R.level_cap(s.state, "anna", levels), 30)
+  s:ok("status", "anna", { badges = 3 })
+  T.eq(R.level_cap(s.state, "anna", levels), nil)
+  local s2 = H.run(1, { preset = "locker" })
+  T.eq(R.level_cap(s2.state, "anna", levels), nil)
+end)
+
+T.test("Orden werden gezählt und gemeldet", function()
+  local s = H.run(2)
+  local eff = s:ok("status", "anna", { badges = 1 })
+  T.has(eff, { type = "discord", kind = "badge" })
+  T.eq(s:p("anna").badges, 1)
+  eff = s:ok("status", "anna", { badges = 1 })
+  T.eq(H.count(eff, { type = "discord" }), 0)
+end)
+
+T.test("Savestate-Erkennung über Spielzeit und Orden", function()
+  local s = H.run(2)
+  s:ok("status", "anna", { play_time = 3600, badges = 2 })
+  T.no(T.find(s.effects, { type = "rollback" }))
+  local eff = s:ok("status", "anna", { play_time = 3602, badges = 2 })
+  T.no(T.find(eff, { type = "rollback" }))
+  eff = s:ok("status", "anna", { play_time = 1800, badges = 2 })
+  T.has(eff, { type = "rollback", player = "anna" })
+  T.has(eff, { type = "notify", level = "alarm" })
+  -- Kein Dauer-Alarm: nächste Meldung mit weiterlaufender Zeit ist ruhig
+  eff = s:ok("status", "anna", { play_time = 1810, badges = 2 })
+  T.no(T.find(eff, { type = "rollback" }))
+  -- Orden im Spiel weniger als zuletzt gemeldet
+  eff = s:ok("status", "anna", { play_time = 1820, badges = 1 })
+  T.has(eff, { type = "rollback" })
+  T.eq(s:p("anna").badges, 2, "erreichter Ordenstand bleibt")
+end)
+
+T.test("Gebietsübersicht mit Status pro Spieler", function()
+  local s = H.run(2)
+  s:ok("status", "anna", { area = H.AREA1 })
+  local eff = s:ok("status", "anna", { area = H.AREA2 })
+  T.has(eff, { type = "notify", text = "Fang offen in Route 202." })
+  s:ok("catch", "anna", { uid = "anna-a", area = H.AREA1 })
+  s:ok("encounter_failed", "ben", { area = H.AREA2 })
+  local rows = R.area_overview(s.state, "anna")
+  T.eq(#rows, 2)
+  T.eq(rows[1].name, "Route 201")
+  T.eq(rows[1].players[1], { player = "anna", status = "gefangen" })
+  T.eq(rows[1].players[2], { player = "ben", status = "Fang offen" })
+  T.eq(rows[2].players[1].status, "verbraucht")
+  T.ok(rows[2].current)
+end)
+
+T.test("Abstimmung: Einstellungen ändern nur mit Zustimmung aller", function()
+  local s = H.run(3)
+  s:ok("propose", "anna", { kind = "settings", payload = { changes = { level_cap = false } } })
+  T.eq(s.state.settings.level_cap, true)
+  local id = "v1"
+  s:ok("vote", "ben", { id = id, accept = true })
+  T.eq(s.state.settings.level_cap, true)
+  s:ok("vote", "cem", { id = id, accept = true })
+  T.eq(s.state.settings.level_cap, false)
+  T.eq(s.state.proposals.v1, nil)
+end)
+
+T.test("Abstimmung: eine Ablehnung verwirft den Vorschlag", function()
+  local s = H.run(2)
+  s:ok("propose", "anna", { kind = "settings", payload = { preset = "hardcore" } })
+  s:ok("vote", "ben", { id = "v1", accept = false })
+  T.eq(s.state.settings.preset, "klassisch")
+  T.has(s:ev("vote", "ben", { id = "v1", accept = true }), { type = "error" })
+  T.has(s:ev("propose", "anna", { kind = "settings", payload = { changes = { nix = 1 } } }), { type = "error" })
+end)
+
+T.test("Abstimmung: Todeszähler zurücksetzen", function()
+  local s = H.run(2)
+  H.catch_all(s, H.AREA1, "a")
+  H.catch_all(s, H.AREA2, "b")
+  s:ok("faint", "anna", { uid = "anna-a" })
+  s:ok("propose", "ben", { kind = "reset_counters" })
+  local eff = s:ok("vote", "anna", { id = "v1", accept = true })
+  T.has(eff, { type = "reset_stats" })
+  T.eq(s:p("anna").deaths, 0)
+  T.eq(s:p("ben").dragged, 0)
+end)
+
+T.test("Abstimmung: Run aufgeben beendet den Versuch", function()
+  local s = H.run(2)
+  s:ok("propose", "ben", { kind = "abandon" })
+  s:ok("vote", "anna", { id = "v1", accept = true })
+  T.eq(s.state.phase, "finished")
+  T.eq(s.state.result, "verloren")
+end)
+
+T.test("Solo: Abstimmung mit einem Spieler greift sofort", function()
+  local s = H.run(1)
+  s:ok("propose", "anna", { kind = "settings", payload = { changes = { follow_mode = false } } })
+  T.eq(s.state.settings.follow_mode, false)
+end)
+
+T.test("Ziel erreicht: Run gewonnen", function()
+  local s = H.run(2, { settings = { goal = { kind = "orden", value = 2 } } })
+  H.catch_all(s, H.AREA1, "a")
+  s:ok("status", "anna", { badges = 2 })
+  T.eq(s.state.phase, "running")
+  local eff = s:ok("status", "ben", { badges = 2 })
+  T.eq(s.state.phase, "finished")
+  T.eq(s.state.result, "gewonnen")
+  T.eq(H.count(eff, { type = "stat", key = "wins" }), 2)
+end)
+
+T.test("Determinismus: gleiche Ereignisse ergeben identischen Zustand", function()
+  local json = require("lib.json")
+  local function play()
+    local s = H.run(3)
+    H.catch_all(s, H.AREA1, "a")
+    H.catch_all(s, H.AREA2, "b")
+    s:ok("encounter_failed", "cem", { area = H.AREA3 })
+    s:ok("faint", "ben", { uid = "ben-b", opponent = "Wilder Gegner" })
+    return json.encode(s.state)
+  end
+  T.eq(play(), play())
+end)
