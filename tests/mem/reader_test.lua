@@ -28,13 +28,17 @@ local function us_layout(emu, opts)
   return vbase, party
 end
 
-T.test("Profil CPUD ist gültig und vollständig ungetestet", function()
+T.test("Profil CPUD ist gültig; Schreib-Einträge bleiben bis zum Emulator-Test ungetestet", function()
   local p, msg = Profiles.load("CPUD")
   T.ok(p, msg)
   T.eq(p.name, "Platin")
-  local tested, total = Profiles.coverage(p)
-  T.eq(tested, 0)
+  local _, total = Profiles.coverage(p)
   T.ok(total >= 8)
+  -- game_code ist im Emulator bestätigt (05.10.2026), reines Lesen.
+  T.eq(p.addresses.game_code.tested, true)
+  -- Schreib-relevante Einträge dürfen erst nach TESTEN.md Abschnitt 3 getestet sein.
+  T.eq(p.addresses.party.tested, false)
+  T.eq(p.addresses.battle_party.tested, false)
   T.eq(p.gym_levels.tested, false)
 end)
 
@@ -85,7 +89,7 @@ end)
 T.test("Kampf: Kennzeichen, wild/Trainer und Gegner", function()
   local emu = Emu.fake()
   local vbase = us_layout(emu)
-  emu.write16(0x0224A55A, 0x2100)
+  emu.write16(0x0224A560, 0x2102) -- High-Byte 0x21 = im Kampf (deutsche Adresse, Phase 2)
   F.put_party(emu, vbase + 0x4BE5C + 8, {}) -- nur damit der Speicher existiert
   local enemy = F.party_mon(1234, 396, 3, 11, 11)
   for i, v in ipairs(enemy) do emu.write8(vbase + 0x4BE5C + i - 1, v) end
@@ -97,7 +101,7 @@ T.test("Kampf: Kennzeichen, wild/Trainer und Gegner", function()
   T.eq(snap.battle.opponent.level, 3)
   emu.write16(vbase + 0x4189E, 17)
   T.eq(r:snapshot(0).battle.wild, false)
-  emu.write16(0x0224A55A, 0x2800)
+  emu.write16(0x0224A560, 0xD116) -- High-Byte 0xD1 != 0x21 -> kein Kampf (out-of-battle-Wert)
   T.eq(r:snapshot(0).battle, nil)
 end)
 
@@ -215,7 +219,7 @@ end)
 T.test("Kampf: Gegner-Team und aktives Monster für die Kampfstatistik", function()
   local emu = Emu.fake()
   local vbase = us_layout(emu)
-  emu.write16(0x0224A55A, 0x2100)
+  emu.write16(0x0224A560, 0x2102)
   local e1 = F.party_mon(5001, 396, 3, 0, 11)
   local e2 = F.party_mon(5002, 399, 4, 12, 12)
   for i, v in ipairs(e1) do emu.write8(vbase + 0x4BE5C + i - 1, v) end

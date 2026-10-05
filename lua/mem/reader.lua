@@ -187,7 +187,14 @@ function Reader:read_battle()
   local v = self:read("battle_flag", 8)
   if v == nil then return nil end
   local active
-  if e.values then active = e.values[v] == true else active = v ~= 0 end
+  if e.high_byte then
+    -- Robust: das High-Byte kennzeichnet den Kampf (z. B. 0x21xx), das Low-Byte ist nur die Phase.
+    active = math.floor(v / 256) == e.high_byte
+  elseif e.values then
+    active = e.values[v] == true
+  else
+    active = v ~= 0
+  end
   if not active then return nil end
   local battle = { wild = true, opponent = {} }
   local bt = self:entry("battle_type")

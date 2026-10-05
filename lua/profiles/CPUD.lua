@@ -19,7 +19,7 @@ return {
   gen = 4,
 
   addresses = {
-    game_code = { addr = 0x023FFE0C, tested = false },
+    game_code = { addr = 0x023FFE0C, tested = true }, -- bestätigt 05.10.2026 (check.lua: "CPUD")
 
     -- Team: erster Datensatz (236 Byte je Monster). Davor u32 Kapazität (6) und u32 Anzahl.
     party = {
@@ -29,18 +29,21 @@ return {
         { ptr = 0x02101D2C, offset = 0xD094, quelle = "yPokeStats US/PAL" },
       },
     },
-    party_count = { rel = "party", offset = -4, width = 32, tested = false },
+    -- Bestätigt 05.10.2026: 1 -> 2 nach einem Fang (Bidaf). Davor Kapazität u32 (6) bei -8.
+    party_count = { rel = "party", offset = -4, width = 32, tested = true },
 
     -- Trainer-Daten liegen laut [IM] direkt vor dem Team (Orden bei Basis +0x96, Team bei +0xB4). Daraus
     -- abgeleitet (Aufbau Name 16 Byte, ID, Geld, Geschlecht, Region, Orden): Spielername bei Team -0x38.
-    trainer_name = { rel = "party", offset = -0x38, tested = false },
+    -- Bestätigt 05.10.2026: liest den Trainernamen "TOM" (0x013E 0x0139 0x0137), Gen-4-Zeichensatz korrekt.
+    trainer_name = { rel = "party", offset = -0x38, tested = true },
 
     -- Orden (Bitfeld, 8 Bit). [IM] Basis +0x96 = Team -0x1E
     badges = { rel = "party", offset = -0x1E, width = 8, tested = false },
 
     -- Beutel. [IM] Medizin-Tasche bei Basis +0xB60; Ball-Tasche abgeleitet aus der Taschenreihenfolge der
     -- Decompilation (Medizin 40 Plätze, Beeren 64 Plätze, je 4 Byte): +0xB60 + 0x1A0 = +0xD00 = Team +0xC4C.
-    bag_balls = { rel = "party", offset = 0xC4C, width = 16, slots = 15, tested = false },
+    -- Bestätigt 05.10.2026: vor dem Kauf balls=false, nach dem Ball-Kauf balls=true.
+    bag_balls = { rel = "party", offset = 0xC4C, width = 16, slots = 15, tested = true },
     -- Medizin-Tasche ([IM] Basis +0xB60 = Team +0xAAC, 40 Plätze) und Kampf-Tasche (nach Bällen: +0xD3C = Team +0xC88,
     -- 30 Plätze, abgeleitet). Für "Items im Kampf" (Bestand vor/nach dem Kampf).
     bag_medicine = { rel = "party", offset = 0xAAC, slots = 40, tested = false },
@@ -50,16 +53,24 @@ return {
     bag_items = { rel = "party", offset = 0x590, slots = 165, tested = false },
 
     -- Aktuelle Karte (Kartennummer, u16). [IM] childMapHeader
-    area_id = { chain = CHAIN, offset = 0x239B0, width = 16, tested = false },
+    -- Bestätigt 05.10.2026: wechselt beim Kartenwechsel (See 334 <-> Route 342), stabil am selben Ort.
+    area_id = { chain = CHAIN, offset = 0x239B0, width = 16, tested = true },
 
-    -- Kampf. [IM] Kampfstatus ist eine feste Adresse der US-Version – in der deutschen Version vermutlich
-    -- verschoben. Gegner-Trainer-ID 0 = wilder Kampf (Annahme).
-    battle_flag = { addr = 0x0224A55A, width = 16, values = { [0x2100] = true, [0x2101] = true }, tested = false },
-    battle_type = { chain = CHAIN, offset = 0x4189E, width = 16, wild_if_zero = true, tested = false },
-    battle_enemy = { chain = CHAIN, offset = 0x4BE5C, tested = false },
+    -- Kampf. US-Adresse war 0x0224A55A; in der deutschen Version +6 verschoben: 0x0224A560.
+    -- Bestätigt 05.10.2026 (wilder Kampf): out-of-battle 0xD116, im Kampf 0x2102. High-Byte 0x21 = im Kampf
+    -- (Low-Byte ist nur die Phase, US war 0x2100/0x2101). Trainer-Kampf noch gegenzuprüfen.
+    battle_flag = { addr = 0x0224A560, width = 16, high_byte = 0x21, tested = true },
+    -- Bestätigt 05.10.2026: wild = 0, Trainerkampf = 1 (wild_if_zero).
+    battle_type = { chain = CHAIN, offset = 0x4189E, width = 16, wild_if_zero = true, tested = true },
+    -- Bestätigt 05.10.2026: wilder Kampf gegen Staralili -> opp = Art 396, Lv. 3.
+    battle_enemy = { chain = CHAIN, offset = 0x4BE5C, tested = true },
     -- Kampfstatistik: PID des aktiven eigenen Monsters ([IM] playerBattleMonPID, Basis +0x47620) und
     -- Gegner-Team (6 Datensätze ab battle_enemy) für besiegte Gegner.
     battle_active_pid = { chain = CHAIN, offset = 0x47620, width = 32, tested = false },
+
+    -- Spielzeit: NICHT gefunden. Der sekündlich steigende Wert nahe dem Team (Team -0x13/-0x12) ist die
+    -- Echtzeituhr (Wanduhr-Minuten/-Sekunden), nicht die Spielzeit. Die echte Spielzeit liegt im Save-Block
+    -- (andere Stelle, TODO). Kein play_time-Eintrag -> Savestate-Erkennung läuft über Ordenstand.
 
     -- Boxen: keine Quelle. check.lua findet den Anfang (Monster in Box 1, Platz 1 legen); dann hier eintragen:
     -- boxes = { rel = "party", offset = <aus dem Bericht>, count = 18, slots = 30, tested = false },

@@ -25,6 +25,44 @@ function monLabel(m) {
   const types = Array.isArray(m.types) && m.types.length ? ` · ${m.types.join('/')}` : '';
   return `${base}${m.level ? ` Lv.${m.level}` : ''}${types}`;
 }
+
+// Sprites: client-seitig aus einer öffentlichen Quelle (PokéAPI) nach National-Dex-Nummer. Im Repo liegt
+// keine einzige Grafik; bricht das Laden ab, bleibt der Text. species == National-Dex (Gen 4: bis 493).
+const DEX_MAX = 1025;
+function spriteUrl(species) {
+  if (!Number.isInteger(species) || species < 1 || species > DEX_MAX) return null;
+  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${species}.png`;
+}
+function spriteImg(species, cls) {
+  const u = spriteUrl(species);
+  return u ? `<img class="${cls}" loading="lazy" alt="" src="${u}" onerror="this.classList.add('broken')">` : '';
+}
+// Typ-Farben (deutsche Typnamen aus der ROM). Unbekannt -> neutral.
+const TYPE_COLORS = {
+  normal: '#9298a4', feuer: '#e9432b', wasser: '#4a7bef', pflanze: '#45a93f', elektro: '#f5c518',
+  eis: '#56c7d6', kampf: '#e0701f', gift: '#9b4fc8', boden: '#c6893f', flug: '#7aa7e6', psycho: '#ef4b84',
+  'käfer': '#8fa31b', kaefer: '#8fa31b', gestein: '#b0a461', geist: '#6d4b8f', drache: '#5a5be0',
+  unlicht: '#5a4a4a', stahl: '#64a6bd', fee: '#ec8fe0',
+};
+function typeColor(t) { return TYPE_COLORS[String(t || '').toLowerCase()] || '#8b93a3'; }
+function typeChips(m) {
+  if (!Array.isArray(m.types) || !m.types.length) return '';
+  return `<div class="types">${m.types.map((t) => `<span class="type" style="background:${typeColor(t)}">${esc(t)}</span>`).join('')}</div>`;
+}
+function monCard(m, team) {
+  if (!m) return '<div class="mon"><span class="muted">unbekannt</span></div>';
+  const dead = m.status === 'tot';
+  const name = m.species_name || m.nickname || `#${m.species}`;
+  const nick = (m.nickname && m.species_name && m.nickname !== m.species_name) ? `<div class="nick">„${esc(m.nickname)}"</div>` : '';
+  const g = m.group && team ? team.groups[m.group] : null;
+  const grp = g ? `<span class="grp" title="Gruppe ${esc(m.group.slice(1))}">G${esc(m.group.slice(1))}</span>` : '';
+  const st = m.stats || {};
+  const gained = m.caught_level && m.level > m.caught_level ? ` · +${m.level - m.caught_level}Lv` : '';
+  const fights = st.battles ? `<div class="meta">${st.battles} Kämpfe · ${st.kos || 0} K.O.${gained}</div>` : '';
+  const free = (!g && m.status === 'frei') ? '<div class="meta">frei</div>' : '';
+  return `<div class="mon ${dead ? 'dead' : ''}">${grp}${spriteImg(m.species, 'sprite')}<div class="ph">❔</div>`
+    + `<div class="nm">${esc(name)}</div>${nick}<div class="lv">Lv. ${m.level || '?'}</div>${typeChips(m)}${free}${fights}</div>`;
+}
 /** http(s)-Adresse des Servers aus der WebSocket-Adresse (für Bilder und Textdateien). */
 function httpBase() {
   const ws = document.querySelector('#server').value.trim();
@@ -128,28 +166,20 @@ function renderHeader(state, derived) {
 function badgeBar(n, max) {
   const total = Math.max(8, max || 8);
   let out = '';
-  for (let i = 0; i < total; i++) out += i < n ? '●' : '○';
-  return `<span title="${n} Orden" aria-label="${n} von ${total} Orden">${out}</span>`;
+  for (let i = 0; i < total; i++) out += `<span class="badge ${i < n ? 'on' : ''}"></span>`;
+  return `<span class="badges" title="${n} Orden" aria-label="${n} von ${total} Orden">${out}</span>`;
 }
 
 function renderParties(state) {
-  // Aktuelles Team jedes Spielers (wie im Spiel gemeldet), mit Gruppe und Status
-  const rows = state.order.map((pid) => {
+  // Aktuelles Team jedes Spielers (wie im Spiel gemeldet), als Monster-Karten mit Sprite und Typ-Farben.
+  const blocks = state.order.map((pid) => {
     const p = state.players[pid];
     const team = state.teams[p.team];
-    const mons = (p.party || []).map((uid) => {
-      const m = p.mons[uid];
-      if (!m) return '<li class="muted">unbekannt</li>';
-      const g = m.group && team ? team.groups[m.group] : null;
-      const tag = g ? ` <span class="muted">(Gr. ${esc(m.group.slice(1))})</span>` : (m.status === 'frei' ? ' <span class="muted">(frei)</span>' : '');
-      const st = m.stats || {};
-      const gained = m.caught_level && m.level > m.caught_level ? `, +${m.level - m.caught_level} Lv.` : '';
-      const fights = st.battles ? ` <span class="muted">· ${st.battles} Kämpfe, ${st.kos || 0} K.O.${gained}</span>` : '';
-      return `<li class="${m.status === 'tot' ? 'dead' : ''}">${esc(monLabel(m))}${tag}${fights}</li>`;
-    }).join('');
-    return `<div class="stat"><b>${esc(p.name)}</b>${badgeBar(p.badges)}<ul class="feed">${mons || '<li class="muted">noch kein Team gemeldet</li>'}</ul></div>`;
+    const cards = (p.party || []).map((uid) => monCard(p.mons[uid], team)).join('');
+    return `<div class="pblock"><div class="phead"><span class="nm">${esc(p.name)}</span><span class="sp"></span>${badgeBar(p.badges)}</div>`
+      + `<div class="mongrid">${cards || '<div class="mon"><span class="muted">noch kein Team gemeldet</span></div>'}</div></div>`;
   }).join('');
-  return `<div class="stats">${rows}</div>`;
+  return `<div class="teamwrap">${blocks}</div>`;
 }
 
 function renderPlayers(state, stats) {
@@ -185,7 +215,7 @@ function renderGroups(state, team) {
       const uid = g.members[pid];
       const m = uid ? state.players[pid].mons[uid] : null;
       const inParty = uid && state.players[pid].party.includes(uid);
-      return `<td class="${m && m.status === 'tot' ? 'dead' : ''}">${m ? esc(monLabel(m)) + (inParty ? ' ★' : '') : '<span class="muted">–</span>'}</td>`;
+      return `<td class="${m && m.status === 'tot' ? 'dead' : ''}">${m ? spriteImg(m.species, 'msprite') + esc(monLabel(m)) + (inParty ? ' ★' : '') : '<span class="muted">–</span>'}</td>`;
     }).join('');
     return `<tr><td>${esc(gid.slice(1))}</td><td>${esc(g.area_name)}</td>${cells}<td class="st-${g.status}">${g.status}</td></tr>`;
   }).join('');
@@ -292,7 +322,7 @@ function renderBattleStats(state) {
   }
   if (!all.length) return '<p class="muted">Noch keine Kämpfe erfasst.</p>';
   all.sort((a, b) => (b.m.stats.kos || 0) - (a.m.stats.kos || 0) || (b.m.stats.battles || 0) - (a.m.stats.battles || 0));
-  const rows = all.slice(0, 20).map(({ m, p }) => `<tr class="${m.status === 'tot' ? 'dead' : ''}"><td>${esc(monLabel(m))}</td>
+  const rows = all.slice(0, 20).map(({ m, p }) => `<tr class="${m.status === 'tot' ? 'dead' : ''}"><td>${spriteImg(m.species, 'msprite')}${esc(monLabel(m))}</td>
     <td>${esc(p.name)}</td><td>${m.stats.battles || 0}</td><td>${m.stats.fought || 0}</td><td>${m.stats.kos || 0}</td>
     <td>${m.caught_level && m.level > m.caught_level ? `+${m.level - m.caught_level}` : '–'}</td></tr>`).join('');
   return `<div class="scroll"><table><thead><tr><th>Monster</th><th>Spieler</th><th>Kämpfe</th><th>eingesetzt</th>
