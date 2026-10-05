@@ -4,7 +4,7 @@
 
 const CLIENT_EVENTS = new Set([
   'leave', 'set_settings', 'set_teams', 'start_run', 'new_attempt',
-  'status', 'catch', 'encounter_failed', 'faint', 'party', 'ack_absence', 'propose', 'vote',
+  'status', 'catch', 'encounter_failed', 'faint', 'party', 'ack_absence', 'propose', 'vote', 'item_used',
 ]);
 
 const CODE_RE = /^[A-Z0-9]{3,16}$/;

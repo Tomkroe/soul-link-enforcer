@@ -3,7 +3,7 @@
 -- Rein, ohne Emulator-API: Die Schnappschüsse liefert der Spiel-Leser (mem/reader.lua) aus dem Profil.
 --
 -- Schnappschuss:
---   { t = ms, area = {key, name}, badges, play_time, has_balls, completed,
+--   { t = ms, area = {key, name}, badges, play_time, has_balls, completed, battle_items (Summe Medizin/Kampf-Items),
 --     party = { {uid, species, species_name, nickname, level, hp, max_hp, shiny, family, is_egg}, ... },
 --     box = { {uid, ...}, ... }  (optional),
 --     battle = nil | { wild = bool, result = nil|"caught"|"won"|"fled"|"lost",
@@ -82,9 +82,10 @@ function Detect:update(snap, dead)
   local st = self:status_event(snap)
   if st then emit(st) end
 
-  -- Kampfbeginn
+  -- Kampfbeginn (Item-Bestand merken: Items im Kampf, Phase 6.7)
   if snap.battle and not self.battle then
-    self.battle = { wild = snap.battle.wild, opponent = snap.battle.opponent or {}, caught = false, area = area }
+    self.battle = { wild = snap.battle.wild, opponent = snap.battle.opponent or {}, caught = false, area = area,
+      items_before = self.prev and self.prev.battle_items }
   end
 
   -- Neue Monster: Fang oder Geschenk
@@ -125,6 +126,9 @@ function Detect:update(snap, dead)
   if self.battle and not snap.battle then
     local b = self.battle
     self.battle = nil
+    if b.items_before and snap.battle_items and snap.battle_items < b.items_before then
+      emit({ type = "item_used", count = b.items_before - snap.battle_items })
+    end
     if b.wild and not b.caught then
       local result = self.prev and self.prev.battle and self.prev.battle.result
       if result == "caught" then

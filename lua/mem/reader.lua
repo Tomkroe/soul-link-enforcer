@@ -200,8 +200,25 @@ function Reader:snapshot(t, read_box)
   end
   local balls = self:read("bag_balls", 16)
   if balls then snap.has_balls = balls ~= 0 end
+  snap.battle_items = self:pocket_total({ "bag_medicine", "bag_battle" })
   snap.battle = self:read_battle()
   return snap
+end
+
+--- Summe der Mengen in Beuteltaschen (Einträge: u16 Item, u16 Menge; Profil: slots = Anzahl Plätze).
+function Reader:pocket_total(names)
+  local total, any = 0, false
+  for _, name in ipairs(names) do
+    local e = self:entry(name)
+    local a = e and self:resolve(e)
+    if a then
+      any = true
+      for i = 0, (e.slots or 0) - 1 do
+        if self.emu.read16(a + i * 4) ~= 0 then total = total + self.emu.read16(a + i * 4 + 2) end
+      end
+    end
+  end
+  return any and total or nil
 end
 
 --- Diagnose für check.lua: was ist gefunden, welche Werte liest das Profil?

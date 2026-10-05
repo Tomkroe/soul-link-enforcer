@@ -36,7 +36,14 @@ return {
 
     -- Beutel. [IM] Medizin-Tasche bei Basis +0xB60; Ball-Tasche abgeleitet aus der Taschenreihenfolge der
     -- Decompilation (Medizin 40 Plätze, Beeren 64 Plätze, je 4 Byte): +0xB60 + 0x1A0 = +0xD00 = Team +0xC4C.
-    bag_balls = { rel = "party", offset = 0xC4C, width = 16, tested = false },
+    bag_balls = { rel = "party", offset = 0xC4C, width = 16, slots = 15, tested = false },
+    -- Medizin-Tasche ([IM] Basis +0xB60 = Team +0xAAC, 40 Plätze) und Kampf-Tasche (nach Bällen: +0xD3C = Team +0xC88,
+    -- 30 Plätze, abgeleitet). Für "Items im Kampf" (Bestand vor/nach dem Kampf).
+    bag_medicine = { rel = "party", offset = 0xAAC, slots = 40, tested = false },
+    bag_battle = { rel = "party", offset = 0xC88, slots = 30, tested = false },
+    -- Item-Tasche (Beginn des Beutels, abgeleitet: Medizin - (165+50+100+12)*4 = Team +0x590, 165 Plätze)
+    -- für Sonderbonbons.
+    bag_items = { rel = "party", offset = 0x590, slots = 165, tested = false },
 
     -- Aktuelle Karte (Kartennummer, u16). [IM] childMapHeader
     area_id = { chain = CHAIN, offset = 0x239B0, width = 16, tested = false },

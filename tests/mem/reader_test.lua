@@ -131,3 +131,16 @@ T.test("KP schreiben nur mit getesteter Team-Adresse, dann an der gefundenen Ste
   T.eq(back.hp, 0)
   T.ok(back.valid)
 end)
+
+T.test("Beutel: Summe der Medizin- und Kampf-Items", function()
+  local emu = Emu.fake()
+  local _, party = us_layout(emu)
+  emu.write16(party + 0xAAC, 17)      -- Trank
+  emu.write16(party + 0xAAC + 2, 5)
+  emu.write16(party + 0xAAC + 4, 26)  -- Superschutz o. ä.
+  emu.write16(party + 0xAAC + 6, 2)
+  emu.write16(party + 0xC88, 55)
+  emu.write16(party + 0xC88 + 2, 1)
+  local r = Reader.new({ profile = Profiles.load("CPUD"), emu = emu })
+  T.eq(r:snapshot(0).battle_items, 8)
+end)

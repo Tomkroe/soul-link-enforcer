@@ -681,6 +681,28 @@ function handlers.faint(ctx, ev)
   ctx:check_team_end(team)
 end
 
+--- Items im Kampf benutzt (Phase 6.7): nur erkennen und als Verstoß protokollieren, nicht sperren.
+function handlers.item_used(ctx, ev)
+  local p, team = require_running(ctx, ev)
+  if not p then return end
+  local count = tonumber(ev.count) or 0
+  if count <= 0 then return end
+  local rule = ctx.state.settings.battle_items
+  local violation
+  if rule.mode == "verboten" then
+    violation = "Items im Kampf sind verboten"
+  elseif rule.mode == "max" and count > rule.max then
+    violation = "höchstens " .. U.num(rule.max) .. " Item(s) pro Kampf erlaubt"
+  end
+  if violation then
+    p.violations = p.violations + 1
+    local text = "Regelverstoß: " .. p.name .. team_tag(ctx.state, team) .. " hat im Kampf " .. U.num(count)
+      .. " Item(s) benutzt (" .. violation .. ")."
+    ctx:notify(text, "warn")
+    ctx:log("violation", text, { player = ev.player })
+  end
+end
+
 --- Aktuelles Team des Spielers (Kennungen, optional mit Level).
 function handlers.party(ctx, ev)
   local p = require_running(ctx, ev)
