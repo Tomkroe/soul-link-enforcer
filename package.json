@@ -14,5 +14,9 @@
     "test": "npm run test:lua && npm run test:server",
     "test:lua": "node scripts/run-lua-tests.js",
     "test:server": "node --test server/test/"
+  },
+  "dependencies": {
+    "fengari": "^0.1.5",
+    "ws": "^8.22.0"
   }
 }
