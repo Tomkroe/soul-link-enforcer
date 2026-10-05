@@ -303,6 +303,11 @@ function handlers.start_run(ctx, ev)
 
   state.attempt = state.attempt + 1
   state.phase = "running"
+  -- Randomizer ohne Seed: festen Seed für diesen Versuch vergeben (gleich für alle, steht im Zustand)
+  local rs = state.settings.randomizer
+  if rs.mode ~= "aus" and rs.seed == "" then
+    rs.seed = state.code .. "-" .. U.num(state.attempt) .. "-" .. U.num(ctx.t)
+  end
   state.started_at = ctx.t
   state.ended_at = 0
   state.result = ""
@@ -472,6 +477,22 @@ function handlers.status(ctx, ev)
       ctx:notify("Erste Bälle im Beutel – die Schonfrist ist vorbei, Tode zählen ab jetzt.", "info", { ev.player })
     end
     if ev.has_balls then p.has_balls = true end
+  end
+  if type(ev.rando_fp) == "string" and ev.rando_fp ~= p.rando_fp then
+    p.rando_fp = ev.rando_fp
+    local differs = {}
+    for _, q in ipairs(state.order) do
+      local o = state.players[q]
+      if q ~= ev.player and o.rando_fp ~= "" and ev.rando_fp ~= "" and o.rando_fp ~= ev.rando_fp then
+        differs[#differs + 1] = o.name
+      end
+    end
+    if #differs > 0 then
+      local text = "Randomizer: Zuordnung von " .. p.name .. " weicht ab von " .. table.concat(differs, ", ")
+        .. " (andere Edition oder Einstellungen?) – die Begegnungen sind nicht gleich!"
+      ctx:notify(text, "alarm")
+      ctx:log("rando_mismatch", text, { player = ev.player })
+    end
   end
   if ev.completed == true and not p.completed then
     p.completed = true

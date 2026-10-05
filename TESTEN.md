@@ -107,6 +107,24 @@ Vorbereitung: `backups.save_path` setzen, `write_enabled = true`, nur `party` au
 - [ ] Emulator neu starten → derselbe Zustand (Tote bleiben tot), `local/solo_<name>.json` vorhanden.
 - [ ] Nach verlorenem Run: Taste N → neuer Versuch, Versuchszähler +1.
 
+## 5. Randomizer (erst nach Abschnitt 3)
+
+- [ ] `config.lua`: `rom_path` auf die eigene Platin-ROM setzen. `check.lua`: „ROM gelesen“ mit Game-Code CPUD
+      und Zahl der Begegnungstabellen. Fehlt die Datei, stimmt der Pfad `randomizer.encounter_narc` nicht.
+- [ ] `check.lua` auf einer Route mit Gras: „Begegnungstabelle: 0x…“ gefunden. Notieren, ob die Adresse nach
+      einem Kartenwechsel gleich bleibt (dann als feste Adresse ins Profil).
+- [ ] Format prüfen: Die angezeigten Arten der Tabelle passen zu den Begegnungen der Route (Gras, Surfen, Angeln).
+      Sonst stimmt `randomizer.encounter_layout` nicht.
+- [ ] `encounter_table.tested = true`, `write_enabled = true`, in der Lobby `randomizer = { mode = "alle", seed = "test" }`.
+      Overlay: „Randomizer aktiv (alle, <Fingerabdruck>)“.
+- [ ] Wilde Begegnungen auf der Route sind andere Arten als normal. Gebiet verlassen und wieder betreten → wieder
+      dieselben neuen Arten.
+- [ ] Zwei Spieler, gleicher Seed: auf derselben Route dieselben Arten; gleicher Fingerabdruck im Overlay.
+- [ ] Ein Spieler mit anderem Seed oder anderer Edition → Warnung „Zuordnung weicht ab“ bei allen.
+- [ ] Im Kampf wird nichts geschrieben (Tabelle erst nach Kampfende).
+- [ ] Modus `edition`: nur Arten, die es in Platin wild gibt.
+- [ ] Erst wenn alles stabil ist: `randomizer.stage_a_stable = true` (Voraussetzung für Stufe B).
+
 ## 4. Komfort
 
 - [ ] Sicherung bei neuem Orden (`…_orden<N>_orden.dsv`) und alle 15 Minuten; höchstens 20 Dateien.

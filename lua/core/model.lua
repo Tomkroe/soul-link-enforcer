@@ -54,6 +54,7 @@ function M.new_player(id, name, t)
     deaths = 0,                 -- eigene Tode in diesem Versuch
     dragged = 0,                -- mitgerissene Monster in diesem Versuch
     violations = 0,
+    rando_fp = "",              -- Fingerabdruck der Randomizer-Zuordnung (Seed, Modus, Artenliste)
   })
 end
 
@@ -71,6 +72,7 @@ function M.reset_player_run(p)
   p.deaths = 0
   p.dragged = 0
   p.violations = 0
+  p.rando_fp = ""
   p.team = ""
 end
 

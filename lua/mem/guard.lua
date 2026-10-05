@@ -75,4 +75,22 @@ function Guard:write_bytes(name, offset, bytes, in_battle)
   return true
 end
 
+--- Schreibt eine Byte-Liste an eine gefundene Adresse (z. B. per Suche), mit der Freigabe des Profileintrags.
+function Guard:write_bytes_at(name, addr, bytes, in_battle)
+  local ok, reason = self:can_write(name, in_battle)
+  if not ok then
+    if not self.refused[name .. reason] then
+      self.refused[name .. reason] = true
+      self.log("Schreiben abgelehnt (" .. name .. "): " .. reason)
+    end
+    return false, reason
+  end
+  if type(addr) ~= "number" or addr < 0x02000000 or addr + #bytes > 0x02400000 then
+    return false, "Adresse außerhalb des Hauptspeichers"
+  end
+  for i, v in ipairs(bytes) do self.emu.write8(addr + i - 1, v) end
+  self.writes = self.writes + 1
+  return true
+end
+
 return Guard

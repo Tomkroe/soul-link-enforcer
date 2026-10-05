@@ -70,10 +70,34 @@ local function write_report(d)
   for _, name in ipairs({ "badges", "area_id", "bag_balls", "battle_flag", "battle_type" }) do
     lines[#lines + 1] = name .. ": " .. tostring(d[name])
   end
+  lines[#lines + 1] = rando_info
   for _, h in ipairs(search.pointers or {}) do
     lines[#lines + 1] = string.format("Zeiger auf Team-Basis: [%s] + 0x%s", hex(h.ptr), P.hex(h.offset))
   end
   FS.write_atomic(ROOT .. "/local/adressen_" .. tostring(code) .. ".txt", table.concat(lines, "\n") .. "\n")
+end
+
+-- Randomizer: geladene Begegnungstabelle über die ROM-Dateien suchen (braucht rom_path in config.lua)
+local rando_scan, rando_info = nil, "Randomizer: rom_path in config.lua fehlt – Tabellensuche übersprungen"
+do
+  local ok_cfg, cfg = pcall(dofile, ROOT .. "/config.lua")
+  if ok_cfg and type(cfg) == "table" and cfg.rom_path and cfg.rom_path ~= "" and profile and profile.randomizer then
+    local RomFS = require("rando.romfs")
+    local rom, err = RomFS.open_file(cfg.rom_path)
+    if not rom then
+      rando_info = "Randomizer: " .. tostring(err)
+    else
+      local data, ferr = rom:file(profile.randomizer.encounter_narc)
+      local files = data and RomFS.narc(data)
+      if not files then
+        rando_info = "Randomizer: " .. tostring(ferr or "NARC unlesbar") .. " (" .. tostring(profile.randomizer.encounter_narc) .. ")"
+      else
+        add("ROM gelesen", rom.game_code == code, "Game-Code im ROM " .. tostring(rom.game_code) .. ", " .. #files .. " Begegnungstabellen")
+        rando_scan = Finder.block_scanner(adapter, files)
+        rando_info = "Suche Begegnungstabelle ..."
+      end
+    end
+  end
 end
 
 local frames = 0
@@ -85,6 +109,19 @@ gui.register(function()
     y = y + 9
   end
   gui.text(2, y, "Frames: " .. frames, "white")
+  y = y + 9
+  if rando_scan then
+    rando_scan:step(0x40000)
+    if #rando_scan.found > 0 then
+      local f = rando_scan.found[1]
+      rando_info = "Begegnungstabelle: " .. hex(f.addr) .. " (ROM-Datei " .. (f.index - 1) .. ")"
+      rando_scan = nil
+    elseif rando_scan.done then
+      rando_info = "Begegnungstabelle nicht im Speicher gefunden (andere Karte betreten und neu starten)"
+      rando_scan = nil
+    end
+  end
+  gui.text(2, y, rando_info, "gray")
   y = y + 9
   if not reader then return end
 

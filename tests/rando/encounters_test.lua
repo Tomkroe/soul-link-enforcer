@@ -1,0 +1,25 @@
+local T = require("lib.t")
+local Enc = require("rando.encounters")
+local RomFS = require("rando.romfs")
+local F = require("rando.romfake")
+
+local LAYOUT = require("profiles.CPUD").randomizer.encounter_layout
+
+T.test("Arten einer Tabelle lesen", function()
+  local b = RomFS.bytes(F.enc_table({ 396, 399, 396, 403 }, { 54, 55 }))
+  T.eq(Enc.species(b, LAYOUT, 493), { 396, 399, 396, 403, 54, 55 })
+  T.ok(Enc.plausible(b, LAYOUT, 493))
+  T.no(Enc.plausible(RomFS.bytes(string.rep("\0", 0x1A8)), LAYOUT, 493), "leer")
+  local bad = RomFS.bytes(F.enc_table({ 600 }))
+  T.no(Enc.plausible(bad, LAYOUT, 493))
+end)
+
+T.test("Zuordnung anwenden: nur Arten ändern sich, Level und Raten bleiben", function()
+  local b = RomFS.bytes(F.enc_table({ 396, 399, 396 }, { 54 }))
+  local out, changed = Enc.apply(b, LAYOUT, { [396] = 1, [54] = 7 })
+  T.eq(changed, 3)
+  T.eq(Enc.species(out, LAYOUT), { 1, 399, 1, 7 })
+  T.eq(out[1], 20, "Rate")
+  T.eq(out[0x04 + 1], 3, "Level")
+  T.eq(#out, #b)
+end)

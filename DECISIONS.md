@@ -154,3 +154,27 @@ Merkmal im Spielzustand (`prologue.done`); läuft die Folge vorher aus, schaltet
 Geschwindigkeit und meldet es. Automatik-Eingaben haben Vorrang vor der Eingabesperre. Den Namen aus
 `config.lua` schreibt das Script nach dem Prolog in den Spielstand, weil die Bildschirmtastatur je Sprache
 anders aufgebaut ist; das geschieht nur über den Schreibschutz und mit getesteter Adresse.
+
+## E17 – Randomizer: Zuordnung pro Gebiet über Originalart, Daten aus der eigenen ROM (05.10.2026)
+
+- **Zuordnung:** Pro Gebiet wird die Artenliste mit einem aus „Seed|A|Gebiet“ abgeleiteten Zufall gemischt.
+  Die sortierten Originalarten des Gebiets bekommen der Reihe nach die gemischten Arten. Gleiche Originalart heißt
+  damit gleiche neue Art, und verschiedene Originalarten werden verschiedene Arten, sodass die Seltenheitsstufen
+  erhalten bleiben. Die Zuordnung hängt nicht von der Reihenfolge der Besuche ab.
+- **Determinismus:** FNV-1a + 32-Bit-LCG nur über `lib/bits.lua`. Ein Test mit Referenzwerten läuft unter Lua 5.1
+  und fengari. Er hat beim Bau einen Ganzzahlüberlauf unter fengari aufgedeckt, der sonst zu unterschiedlichen
+  Begegnungen geführt hätte.
+- **Gleichheit zwischen Spielern:** Fingerabdruck aus Seed, Modus und Artenliste im Status; die Engine warnt bei
+  Abweichung. Im Modus `edition` müssen alle dieselbe Edition spielen.
+- **Seed:** leer = beim Run-Start vom Zustand vergeben (Lobby-Code, Versuch, Zeit). Er steht im Run-Zustand und
+  gilt damit für alle.
+- **Spieldaten zur Laufzeit:** Die Artenliste für `edition` und die Begegnungsdateien kommen aus der ROM des
+  Spielers (`rom_path`, nur lesen). Kein Datensatz liegt im Projekt.
+- **Tabelle im Speicher:** Es gibt keine Quelle für die Adresse. Das Script sucht einen Block, der exakt einer
+  ROM-Begegnungsdatei entspricht. Bereits geänderte Tabellen werden nicht noch einmal geändert: Die
+  geschriebenen Arten pro Gebiet werden gemerkt, auch über Neustarts (`local/rando_<CODE>.json`).
+- **Stufen-Reihenfolge:** B und C haben nur Zuordnungen und Sperren. Speicherzugriffe dafür werden laut Vorgabe
+  erst gebaut, wenn die vorige Stufe stabil getestet ist.
+- **Item-Ausschlüsse (C):** „VMs und Basis-Items“ als ganze Taschen ausgeschlossen (VM/TM-Tasche, Basis-Items-Tasche).
+  Die Tasche allein trennt TM und VM nicht sicher, deshalb bleiben auch TMs unverändert. Das lässt sich lockern,
+  sobald die Item-Daten aus der ROM gelesen werden.

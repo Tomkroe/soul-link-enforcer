@@ -47,7 +47,32 @@ return {
     battle_type = { chain = CHAIN, offset = 0x4189E, width = 16, wild_if_zero = true, tested = false },
     battle_enemy = { chain = CHAIN, offset = 0x4BE5C, tested = false },
 
+    -- Geladene Begegnungstabelle der aktuellen Karte: keine Quelle. Das Script sucht sie im Speicher
+    -- (exakter Abgleich mit den Begegnungsdateien aus der eigenen ROM, rom_path in config.lua).
+    encounter_table = { scan = true, tested = false },
+
     -- Noch offen (keine Quelle): Spielzeit, Boxen, Spieldaten-Tabellen (Artnamen, Gebietsnamen).
+  },
+
+  -- Randomizer (Phase 5). Pfad und Format aus Erinnerung an die DPPt-Struktur, ungeprüft (TESTEN.md).
+  randomizer = {
+    encounter_narc = "fielddata/encountdata/pl_enc_data.narc",
+    encounter_layout = {
+      size = 0x1A8,
+      slots = {
+        { offset = 0x08, count = 12, stride = 8, width = 32 },  -- Gras: 12 x (Level u32, Art u32)
+        { offset = 0x64, count = 10, stride = 4, width = 32 },  -- Schwarm 2, Tag 2, Nacht 2, Radar 4
+        { offset = 0xA4, count = 10, stride = 4, width = 32 },  -- GBA-Einschub (je 2: R, S, Sm, FR, BG)
+        { offset = 0xD4, count = 5, stride = 8, width = 32 },   -- Surfen
+        { offset = 0x100, count = 5, stride = 8, width = 32 },  -- (Zertrümmerer, in DPPt ungenutzt)
+        { offset = 0x12C, count = 5, stride = 8, width = 32 },  -- Angel
+        { offset = 0x158, count = 5, stride = 8, width = 32 },  -- Profiangel
+        { offset = 0x184, count = 5, stride = 8, width = 32 },  -- Superangel
+      },
+    },
+    exclude = {},               -- Arten, die nie als Ersatz vorkommen sollen
+    stage_a_stable = false,     -- erst true, wenn Stufe A im Emulator stabil getestet ist
+    stage_b_stable = false,
   },
 
   -- Höchstes Level des jeweiligen Arenaleiters in Platin (Index 1 = erster Orden), danach Top Vier und Champ.

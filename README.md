@@ -26,7 +26,7 @@ Spielkopie. Das Projekt enthält und lädt **keine ROMs, keine Spielgrafiken, ke
 9. [Discord einrichten](#discord-einrichten)
 10. [Sicherungen zurückspielen](#sicherungen-zurückspielen)
 11. [Neues Profil anlegen](#neues-profil-anlegen)
-12. [Randomizer für Trainer und Attacken](#randomizer-für-trainer-und-attacken)
+12. [Randomizer (Phase 5)](#randomizer-phase-5) · [für Trainer und Attacken](#randomizer-für-trainer-und-attacken)
 13. [Entwicklung und Tests](#entwicklung-und-tests)
 
 ## Aufbau
@@ -39,7 +39,7 @@ lua/core/            Regel-Engine und Zustandsmodell (rein, ohne Emulator-API)
 lua/mem/             Lesen/Schreiben, Ent-/Verschlüsselung, Prüfsummen, Schreibschutz
 lua/net/             Verbindung zum Server über die lokale Brücke
 lua/profiles/        ein Profil pro Spiel (Game-Code), Vorlage: _vorlage.lua
-lua/rando/           Randomizer (geplant)
+lua/rando/           Randomizer: Zufall, Zuordnung, Begegnungstabellen, ROM-Dateisystem
 bridge/bridge.js     lokale Brücke Script <-> Server (startet automatisch mit)
 server/              Vermittlungsserver (Node.js), Discord, Speicherung
 web/                 Run-Übersicht (statische Seite)
@@ -347,6 +347,31 @@ Zurückspielen:
 6. `npm test` ausführen. Die Profilprüfung (`Profiles.validate`) meldet fehlende Markierungen.
 
 Unbekannte ROM oder fehlerhaftes Profil: klare Meldung im Overlay, das Script bleibt im Lesemodus.
+
+## Randomizer (Phase 5)
+
+Einstellung in der Lobby (`lobby_settings.changes`): `randomizer = { mode = "alle", seed = "" }`.
+- `mode`: `aus` | `alle` (alle Arten der Generation) | `edition` (nur Arten, die in den Begegnungsdaten deines
+  Spiels vorkommen; die Liste liest das Script beim Start aus der ROM).
+- `seed`: beliebiger Text. Leer = der Server vergibt beim Run-Start einen festen Seed für diesen Versuch.
+
+**Stufe A (umgesetzt):** Beim Betreten eines Gebiets überschreibt das Script die geladene Begegnungstabelle.
+Die Zuordnung ist pro Gebiet fest: Jede Originalart wird zu einer festen neuen Art, verschiedene Originalarten
+werden zu verschiedenen neuen Arten (Seltenheitsstufen bleiben). Level und Raten ändern sich nicht. Geschrieben
+wird nur außerhalb von Kämpfen und nur, wenn `encounter_table` im Profil getestet und `write_enabled` an ist.
+
+**Gleiche Begegnungen bei allen:** Die Zuordnung hängt nur von Seed, Modus und Artenliste ab und ist in jeder
+Lua-Version gleich (automatisch getestet). Jedes Script meldet einen Fingerabdruck davon an den Server. Weicht
+er bei einem Spieler ab (z. B. andere Edition im Modus `edition`), bekommen alle eine Warnung.
+
+**Was dafür nötig ist:** `rom_path` in `config.lua` (Pfad zu deiner eigenen ROM, wird nur gelesen). Das Script
+liest daraus die Begegnungsdateien und findet über einen exakten Abgleich die gerade geladene Tabelle im
+Speicher. `lua/check.lua` zeigt, ob das klappt.
+
+**Stufen B und C** (Starter/Geschenke/feste Begegnungen bzw. geschenkte Items): Die Zuordnungen sind fertig und
+getestet, ebenso die Ausschlussliste für Items. Ausgeschlossen sind VM/TM-Tasche und Basis-Items, abgeleitet aus
+den Taschen des Spiels. Die Schreibzugriffe kommen erst, wenn Stufe A im Emulator stabil läuft
+(Profil: `randomizer.stage_a_stable = true`) bzw. Stufe B (`stage_b_stable`).
 
 ## Randomizer für Trainer und Attacken
 

@@ -17,6 +17,7 @@ local Backup = require("app.backup")
 local Inputs = require("app.inputs")
 local Automation = require("app.automation")
 local LocalHub = require("net.local_hub")
+local Rando = require("rando")
 
 local App = {}
 App.__index = App
@@ -117,6 +118,16 @@ function App.new(opts)
     set_speed = function(mode) return self.emu.set_speed and self.emu.set_speed(mode) end,
     write_name = function(name) return self:write_trainer_name(name) end,
   })
+
+  -- Randomizer (Phase 5)
+  if self.profile then
+    self.rando = Rando.new({
+      profile = self.profile, emu = self.emu, guard = self.guard, reader = self.reader, fs = self.fs,
+      local_dir = local_dir, rom_path = cfg.rom_path, rom = opts.rom,
+      note = function(text, level) self:note(text, level) end,
+      backup = function() self.backup:before_first_write(self.snap and self.snap.badges) end,
+    })
+  end
 
   -- Sicherungen
   local b = cfg.backups or {}
@@ -269,7 +280,25 @@ function App:tick()
       self.detect:seed_known(known)
       self.seeded = true
     end
-    for _, ev in ipairs(self.detect:update(snap, dead)) do self.client:send_event(ev) end
+    local fp = self.rando and self.rando.fingerprint or ""
+    local sent_status = false
+    for _, ev in ipairs(self.detect:update(snap, dead)) do
+      if ev.type == "status" then
+        ev.rando_fp = fp
+        sent_status = true
+      end
+      self.client:send_event(ev)
+    end
+    local me = state.players[pid]
+    if not sent_status and me and fp ~= (me.rando_fp or "") and fp ~= self.sent_fp then
+      self.sent_fp = fp
+      self.client:send_event({ type = "status", rando_fp = fp })
+    end
+  end
+
+  if self.rando and snap and state and state.phase == "running" then
+    local ok, err = pcall(self.rando.tick, self.rando, state.settings, snap)
+    if not ok then self:note("Randomizer-Fehler: " .. tostring(err), "warn") end
   end
 
   if snap and self.profile then
@@ -377,6 +406,8 @@ function App:extra_lines()
   local out = {}
   local s = self.auto:status_line()
   if s then out[#out + 1] = { text = s, color = "gelb" } end
+  local r = self.rando and self.rando:status_line()
+  if r then out[#out + 1] = { text = r, color = self.rando.status == "aktiv" and "gruen" or "gelb" } end
   if self.recorder then
     out[#out + 1] = { text = "AUFNAHME läuft (Taste " .. tostring((self.cfg.hotkeys or {}).record) .. " beendet)", color = "rot" }
   end

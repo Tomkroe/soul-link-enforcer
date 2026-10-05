@@ -20,6 +20,10 @@ return {
     exchange_dir = nil,       -- Standard: <Projekt>/bridge/exchange
   },
 
+  -- Pfad zur eigenen ROM-Datei (nur lesen): für den Randomizer-Modus "edition" und die Suche nach der
+  -- Begegnungstabelle. Die ROM wird nie kopiert oder verschickt.
+  rom_path = "",          -- z. B. "C:/ROMs/Pokemon Platin.nds"
+
   -- Schreibzugriffe auf den Spielspeicher. Erst einschalten, wenn TESTEN.md abgehakt ist!
   -- Auch dann wird nur an Adressen geschrieben, die im Profil als getestet markiert sind.
   write_enabled = false,

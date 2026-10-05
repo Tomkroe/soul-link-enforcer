@@ -78,6 +78,55 @@ function Finder.scanner(emu, gen, opts)
   return s
 end
 
+--- Schrittweise Suche nach Blöcken, die exakt einem der übergebenen Blöcke entsprechen (z. B. die aktuell
+-- geladene Begegnungstabelle = eine Datei aus dem ROM). blocks: Liste von Texten gleicher Länge.
+-- Rückgabe wie scanner: Objekt mit :step(bytes), .found = { {addr, index}, ... }.
+function Finder.block_scanner(emu, blocks, opts)
+  opts = opts or {}
+  local index = {}
+  local function key(a, b) return string.format("%.0f:%.0f", a, b) end
+  local function le32(s, off)
+    local x1, x2, x3, x4 = s:byte(off + 1, off + 4)
+    return x1 + x2 * 256 + x3 * 65536.0 + x4 * 16777216.0
+  end
+  for i, blk in ipairs(blocks) do
+    if #blk >= 16 then
+      local k = key(le32(blk, 0), le32(blk, 4))
+      index[k] = index[k] or {}
+      table.insert(index[k], i)
+    end
+  end
+  local s = { pos = opts.from or Finder.RAM_START, stop = opts.to or Finder.RAM_END, found = {}, done = false }
+  function s:step(bytes)
+    local last = math.min(self.stop - 16, self.pos + (bytes or 0x10000))
+    local addr = self.pos
+    while addr < last do
+      local cands = index[key(emu.read32(addr), emu.read32(addr + 4))]
+      if cands then
+        for _, i in ipairs(cands) do
+          if Finder.block_equals(emu, addr, blocks[i]) then
+            self.found[#self.found + 1] = { addr = addr, index = i }
+            break
+          end
+        end
+      end
+      addr = addr + 4
+    end
+    self.pos = last
+    if self.pos >= self.stop - 16 then self.done = true end
+    return self.done
+  end
+  return s
+end
+
+--- Vergleicht den Speicher ab addr mit einem Text.
+function Finder.block_equals(emu, addr, blk)
+  for j = 0, #blk - 1 do
+    if emu.read8(addr + j) ~= blk:byte(j + 1) then return false end
+  end
+  return true
+end
+
 --- Sucht Zeiger, die auf base - offset zeigen, für bekannte Offsets (um eine Zeigerkette zu bestätigen).
 -- Gibt eine Liste { {ptr_addr, offset}, ... } zurück. Durchsucht nur [from, to).
 function Finder.find_pointers(emu, target, offsets, from, to)

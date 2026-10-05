@@ -74,7 +74,13 @@ Export des Todesprotokolls als Textdatei gehört zu Phase 6 und ist offen.
 Zustand und Zähler in `local/`, Run startet automatisch. Alternativ allein über den Server (mit Übersicht
 und Discord).
 
-**Phase 5 – Randomizer:** nicht begonnen (Platzhalter `lua/rando`).
+**Phase 5 – Randomizer:** Stufe A im Code fertig und automatisch getestet: deterministischer Zufall (gleiche Werte
+unter Lua 5.1 und fengari, Referenzwerte im Test), Zuordnung pro Gebiet, Modi alle/edition, Artenliste aus den
+Begegnungsdaten der eigenen ROM (NDS-Dateisystem und NARC-Leser), Suche der geladenen Tabelle per Abgleich mit
+den ROM-Dateien, Schreiben nur über den Schreibschutz und außerhalb von Kämpfen, Seed-Vergabe beim Run-Start,
+Fingerabdruck-Abgleich zwischen Spielern. Stufen B und C: Zuordnungen und Item-Ausschlüsse fertig, Schreibzugriffe
+gesperrt bis Stufe A bzw. B stabil getestet sind (laut Vorgabe). Für Platin ungeprüft: NARC-Pfad und
+Tabellenformat. Test im Emulator: TESTEN.md Abschnitt 5 (nach Abschnitt 3).
 **Phase 6:** Klauseln 1–3 und 4 (Geschenke) in der Engine fertig. Folgemodus, Items im Kampf und
 Textexport offen.
 **Phase 7:** Vorlagen (eingebaut + speichern), Discord und Run-Übersicht fertig. Offen: Vorlage laden aus
@@ -84,6 +90,7 @@ Offen: Team-Einteilung bedienen, Bilanz pro Team-Konstellation.
 
 ## Verlauf
 
+- 05.10.2026 (4): Phase 5 Randomizer Stufe A, Zuordnungen für B/C, ROM-Leser, Fingerabdruck-Abgleich.
 - 05.10.2026 (3): Aufhol-Modus-Overlay (Kasten mit Grenze, Fang hier, freie Gebiete, „offline seit“),
   Phase 4 (Gruppen-Ansicht, Automatiken Prolog/Spitzname, Eingabe-Aufnahme, lokale Todeszähler),
   Solo-Modus ohne Server.
