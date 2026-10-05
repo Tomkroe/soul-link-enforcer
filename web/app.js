@@ -399,7 +399,6 @@ function render() {
   html += card('Todesprotokoll (alle Versuche)', renderDeathlogAll(state, last.ledger), true);
   html += card('Regelverstöße', renderViolations(state, last.ledger), true);
   html += card('Erfolge', renderAchievements(state, last.ledger), true);
-  if (state.phase !== 'lobby') html += card('Tipprunden', renderTips(state));
   if (state.phase !== 'lobby') html += card('Kampfstatistik', renderBattleStats(state));
   if (state.phase !== 'lobby') {
     const base = httpBase();
