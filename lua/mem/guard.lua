@@ -18,6 +18,7 @@ function Guard.new(opts)
   self.enabled = opts.enabled and true or false
   self.selftest_ok = false
   self.log = opts.log or function() end
+  self.resolve = opts.resolve -- optional: löst Zeiger-Einträge { ptr, offset } zur Adresse auf
   self.refused = {}
   self.writes = 0
   return self
@@ -39,6 +40,12 @@ function Guard:can_write(name, in_battle)
   return true, ""
 end
 
+function Guard:address(name)
+  local entry = self.profile.addresses[name]
+  if self.resolve then return self.resolve(entry) end
+  return entry.addr
+end
+
 --- Schreibt width (8/16/32) Bit an Basisadresse des Profileintrags + offset.
 function Guard:write(name, offset, width, value, in_battle)
   local ok, reason = self:can_write(name, in_battle)
@@ -49,7 +56,7 @@ function Guard:write(name, offset, width, value, in_battle)
     end
     return false, reason
   end
-  local addr = self.profile.addresses[name].addr + (offset or 0)
+  local addr = self:address(name) + (offset or 0)
   if width == 8 then self.emu.write8(addr, value)
   elseif width == 16 then self.emu.write16(addr, value)
   elseif width == 32 then self.emu.write32(addr, value)
@@ -62,7 +69,7 @@ end
 function Guard:write_bytes(name, offset, bytes, in_battle)
   local ok, reason = self:can_write(name, in_battle)
   if not ok then return self:write(name, offset, 8, 0, in_battle) end
-  local addr = self.profile.addresses[name].addr + (offset or 0)
+  local addr = self:address(name) + (offset or 0)
   for i, v in ipairs(bytes) do self.emu.write8(addr + i - 1, v) end
   self.writes = self.writes + 1
   return true

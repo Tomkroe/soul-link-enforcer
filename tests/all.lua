@@ -10,4 +10,8 @@ return {
   "mem.pkm_test",
   "mem.guard_test",
   "mem.detect_test",
+  "app.enforce_test",
+  "app.backup_test",
+  "app.app_test",
+  "app.desmume_test",
 }

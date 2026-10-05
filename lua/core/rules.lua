@@ -115,7 +115,8 @@ function R.team_check(state, pid, party)
 
   local others = {}
   for _, q in ipairs(M.teammates(state, pid)) do
-    if state.players[q].online then
+    -- Nur Mitspieler, die online sind und schon ein Team gemeldet haben.
+    if state.players[q].online and #state.players[q].party > 0 then
       others[#others + 1] = complete_set((party_groups(state, q, nil)))
     end
   end
