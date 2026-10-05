@@ -44,10 +44,11 @@ function api.derive(state_json)
 end
 
 --- Bilanz fortschreiben: Rückgabe neue Bilanz.
-function api.ledger_apply(ledger_json, effects_json, names_json)
+function api.ledger_apply(ledger_json, effects_json, names_json, now)
   local ledger = json.decode(ledger_json)
   if type(ledger) ~= "table" or not ledger.players then ledger = L.new() end
-  return json.encode(L.apply(ledger, json.decode(effects_json), json.decode(names_json or "{}")))
+  local result, unlocked = L.apply(ledger, json.decode(effects_json), json.decode(names_json or "{}"), tonumber(now))
+  return json.encode(json.object({ ledger = result, effects = json.array(L.unlock_effects(unlocked)) }))
 end
 
 --- Bilanz für eine Lobby.

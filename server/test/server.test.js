@@ -297,3 +297,23 @@ test('Discord: bei Drosselung (429) einmal nach Wartezeit wiederholen', async ()
   await d.post('death', 'aus');
   assert.equal(calls, 2, 'abgeschaltete Meldungsart wird nicht gesendet');
 });
+
+test('Erfolge: Freischalten wird gemeldet und an Discord geschickt', async () => {
+  const posts = [];
+  const fakeFetch = async (u, opts) => { posts.push(JSON.parse(opts.body).content); return { ok: true, status: 204 }; };
+  const { srv, url } = await startServer({ discordFetch: fakeFetch, discordUrl: 'https://discord.invalid/x' });
+  try {
+    const a = await connect(url, { role: 'player', lobby: 'ERFOLG', name: 'Anna' });
+    await a.event({ type: 'start_run' });
+    await a.event({ type: 'catch', uid: 'a1', area: { key: '1', name: 'R1' } });
+    const eff = await a.waitFor((m) => m.op === 'effects' && m.effects.some((e) => e.type === 'achievement'));
+    assert.ok(eff.effects.find((e) => e.type === 'achievement' && e.id === 'erster_fang'));
+    const st = await a.waitFor((m) => m.op === 'state' && m.ledger?.players?.anna?.achievements?.erster_fang);
+    assert.ok(st);
+    await srv.hub.discord.queue;
+    assert.ok(posts.some((p) => p.includes('Erfolg für Anna') && p.includes('Erster Fang')));
+    a.close();
+  } finally {
+    await srv.stop();
+  }
+});

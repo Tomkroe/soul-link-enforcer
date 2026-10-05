@@ -69,8 +69,9 @@ function Hub:push_state()
 end
 
 function Hub:handle_effects(effects)
-  L.apply(self.ledger, effects, { [self.pid] = self.name })
+  local _, unlocked = L.apply(self.ledger, effects, { [self.pid] = self.name }, self.now())
   self.stats = self.ledger.players
+  for _, e in ipairs(L.unlock_effects(unlocked)) do effects[#effects + 1] = e end
 end
 
 --- Wendet ein Ereignis an. Rückgabe: Fehlertext oder nil.

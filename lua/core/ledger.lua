@@ -8,6 +8,7 @@
 --     deathlog = { { t, player, player_name, label, level, area, opponent, by, cause, attempt, lobby }, ... } }
 
 local U = require("core.util")
+local A = require("core.achievements")
 
 local L = {}
 
@@ -45,14 +46,20 @@ function L.constellation_key(teams)
   return table.concat(keys, "|")
 end
 
---- Schreibt Effekte fort. names: [id] = Anzeigename (optional).
-function L.apply(ledger, effects, names)
+--- Schreibt Effekte fort. names: [id] = Anzeigename (optional), now: Zeit für neue Erfolge.
+-- Rückgabe: Bilanz, Liste neu freigeschalteter Erfolge { player, id, name, text }.
+function L.apply(ledger, effects, names, now)
   names = names or {}
+  local touched = {}
   ledger.players = ledger.players or U.map()
   ledger.constellations = ledger.constellations or U.map()
   ledger.deathlog = ledger.deathlog or U.list()
   ledger.violations = ledger.violations or U.list()
   for _, e in ipairs(effects) do
+    if e.player then touched[e.player] = true end
+    for _, t in ipairs(e.teams or {}) do
+      for _, pid in ipairs(t.members or {}) do touched[pid] = true end
+    end
     if e.type == "violation" then
       local log = ledger.violations
       log[#log + 1] = e.entry
@@ -102,7 +109,28 @@ function L.apply(ledger, effects, names)
       end
     end
   end
-  return ledger
+  local unlocked = {}
+  for _, pid in ipairs(U.sorted_keys(touched)) do
+    local p = ledger.players[pid]
+    if p then
+      for _, a in ipairs(A.check(p, now)) do
+        unlocked[#unlocked + 1] = { player = pid, name_player = p.name, id = a.id, name = a.name, text = a.text }
+      end
+    end
+  end
+  return ledger, unlocked
+end
+
+--- Effekte zu neu freigeschalteten Erfolgen (Meldung an alle, Discord).
+function L.unlock_effects(unlocked)
+  local out = {}
+  for _, u in ipairs(unlocked) do
+    local text = "Erfolg für " .. u.name_player .. ": „" .. u.name .. "“ – " .. u.text
+    out[#out + 1] = { type = "notify", level = "info", text = text }
+    out[#out + 1] = { type = "discord", kind = "achievement", text = text }
+    out[#out + 1] = { type = "achievement", player = u.player, id = u.id, name = u.name }
+  end
+  return out
 end
 
 --- Bilanz für die Spieler einer Lobby (für Anzeige): Spieler-Einträge und passende Konstellationen.

@@ -259,6 +259,25 @@ function renderDeathlogAll(state, ledger) {
 const VIOLATIONS = { orden_aufhol: 'Orden im Aufhol-Modus', items_im_kampf: 'Items im Kampf', savestate: 'alter Spielstand',
   level_cap: 'über dem Level-Cap', fang_gesperrt: 'gesperrter Fang' };
 
+const ACHIEVEMENTS = [
+  ['erster_fang', 'Erster Fang'], ['sammler', 'Sammler'], ['glitzer', 'Glitzer'], ['erster_orden', 'Erster Orden'],
+  ['ordensjaeger', 'Ordensjäger'], ['achtfach', 'Achtfach'], ['makellos', 'Makellos'], ['aufholjagd', 'Aufholjagd'],
+  ['volles_haus', 'Volles Haus'], ['sieger', 'Sieger'], ['hattrick', 'Hattrick'], ['durchhalter', 'Durchhalter'],
+  ['pechvogel', 'Pechvogel'], ['friedhofsgaertner', 'Friedhofsgärtner'], ['seelenverwandt', 'Seelenverwandt'],
+  ['tippkoenig', 'Tippkönig'],
+];
+
+function renderAchievements(state, ledger) {
+  if (!ledger) return '<p class="muted">Noch keine Bilanz.</p>';
+  return `<div class="stats">${state.order.map((pid) => {
+    const p = ledger.players[pid] || {};
+    const got = p.achievements || {};
+    const items = ACHIEVEMENTS.map(([id, name]) => `<li class="${got[id] ? '' : 'muted'}">${got[id] ? '★' : '☆'} ${esc(name)}</li>`).join('');
+    const n = ACHIEVEMENTS.filter(([id]) => got[id]).length;
+    return `<div class="stat"><b>${esc(p.name || pid)}</b>${n}/${ACHIEVEMENTS.length}<ul class="feed">${items}</ul></div>`;
+  }).join('')}</div>`;
+}
+
 function renderViolations(state, ledger) {
   const log = (ledger && ledger.violations) || [];
   if (!log.length) return '<p class="muted">Keine Regelverstöße.</p>';
@@ -291,5 +310,6 @@ function render() {
   html += card('Bilanz (alle Runs)', renderLedger(state, last.ledger), true);
   html += card('Todesprotokoll (alle Versuche)', renderDeathlogAll(state, last.ledger), true);
   html += card('Regelverstöße', renderViolations(state, last.ledger), true);
+  html += card('Erfolge', renderAchievements(state, last.ledger), true);
   app.innerHTML = html;
 }

@@ -202,8 +202,10 @@ class Hub {
     if (effects.some((e) => e.type === 'stat' || e.type === 'reset_stats' || e.type === 'result' || e.type === 'death' || e.type === 'violation')) {
       const names = {};
       for (const pid of lobby.state.order) names[pid] = lobby.state.players[pid].name;
-      this.ledger = this.core.ledgerApply(this.ledger, effects, names);
+      const out = this.core.ledgerApply(this.ledger, effects, names, ev.t);
+      this.ledger = out.ledger;
       this.dirtyStats = true;
+      for (const e of out.effects) effects.push(e); // Erfolge: Meldung, Discord, Anzeige
     }
     for (const eff of effects) this.handleEffect(lobby, eff);
     this.broadcast(lobby, effects);
@@ -213,6 +215,9 @@ class Hub {
 
   handleEffect(lobby, eff) {
     if (eff.type === 'discord' && this.discord) {
+      // Lobby-Schalter je Meldungsart (auch für Meldungen aus der Bilanz, z. B. Erfolge)
+      const lobbySwitch = lobby.state.settings && lobby.state.settings.discord;
+      if (lobbySwitch && lobbySwitch[eff.kind] === false) return;
       this.discord.post(eff.kind, eff.text, lobby.state.code);
     }
   }

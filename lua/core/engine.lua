@@ -502,6 +502,13 @@ function handlers.status(ctx, ev)
         ctx:violation(ev.player, "orden_aufhol",
           "Regelverstoß: " .. p.name .. " hat im Aufhol-Modus einen Orden geholt. " .. reason, "alarm")
       end
+      -- Zähler für Erfolge
+      ctx:emit({ type = "stat", player = ev.player, key = "badges", delta = ev.badges - before })
+      if p.deaths == 0 then ctx:emit({ type = "stat", player = ev.player, key = "flawless_badge", delta = 1 }) end
+      if allowed and R.catchup_active(state, ev.player) then
+        ctx:emit({ type = "stat", player = ev.player, key = "catchup_badge", delta = 1 })
+      end
+      if ev.badges >= 8 and before < 8 then ctx:emit({ type = "stat", player = ev.player, key = "all_badges", delta = 1 }) end
       local text = p.name .. team_tag(state, team) .. " hat Orden " .. U.num(ev.badges) .. " erhalten."
       if ev.badges - before > 1 then text = p.name .. " hat jetzt " .. U.num(ev.badges) .. " Orden." end
       ctx:log("badge", text, { player = ev.player })
@@ -557,6 +564,7 @@ function handlers.catch(ctx, ev)
   local label = M.mon_label(mon)
 
   -- Schillernd-Klausel: immer erlaubt, zählt nicht als Gebietsfang.
+  if mon.shiny then ctx:emit({ type = "stat", player = ev.player, key = "shinies", delta = 1 }) end
   if mon.shiny and state.settings.shiny_clause then
     mon.status = "frei"
     ctx:log("catch_free", p.name .. " hat ein schillerndes " .. label .. " gefangen (zählt nicht als Gebietsfang).",
@@ -612,8 +620,18 @@ function handlers.catch(ctx, ev)
     if not g.members[q] then complete = false end
   end
   ctx:log("catch", p.name .. " hat " .. label .. " in " .. ar.name .. " gefangen.", { player = ev.player })
+  ctx:emit({ type = "stat", player = ev.player, key = "catches", delta = 1 })
   if complete then
     g.status = "komplett"
+    -- Erfolg "Volles Haus": sechs komplette, lebende Gruppen gleichzeitig (einmal pro Versuch)
+    local alive = 0
+    for _, gid in ipairs(team.group_order) do
+      if team.groups[gid].status == "komplett" then alive = alive + 1 end
+    end
+    if alive >= 6 and not team.full_team_counted then
+      team.full_team_counted = true
+      for _, q in ipairs(team.members) do ctx:emit({ type = "stat", player = q, key = "full_team", delta = 1 }) end
+    end
     local parts = {}
     for _, q in ipairs(team.members) do
       parts[#parts + 1] = M.player_name(state, q) .. ": " .. M.mon_label(state.players[q].mons[g.members[q]])

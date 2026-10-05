@@ -40,6 +40,7 @@ return {
     vote_no = "U",      -- offene Abstimmung ablehnen
     propose = "V",      -- Vorschlag aus "proposal" (unten) an alle senden
     groups = "H",       -- Gruppen-Ansicht
+    achievements = "E", -- Erfolge
     record = "K",       -- Eingabe-Aufnahme starten/beenden (für die Prolog-Eingabefolge im Profil)
   },
 

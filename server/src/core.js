@@ -15,8 +15,10 @@ function createCore() {
     derive(state) {
       return JSON.parse(mod.call('derive', JSON.stringify(state)));
     },
-    ledgerApply(ledger, effects, names) {
-      return JSON.parse(mod.call('ledger_apply', JSON.stringify(ledger || {}), JSON.stringify(effects), JSON.stringify(names || {})));
+    /** Rückgabe: { ledger, effects } – effects sind Meldungen zu neu freigeschalteten Erfolgen. */
+    ledgerApply(ledger, effects, names, now = 0) {
+      const out = JSON.parse(mod.call('ledger_apply', JSON.stringify(ledger || {}), JSON.stringify(effects), JSON.stringify(names || {}), String(now)));
+      return { ledger: out.ledger, effects: Array.isArray(out.effects) ? out.effects : [] };
     },
     ledgerView(ledger, pids) {
       return JSON.parse(mod.call('ledger_view', JSON.stringify(ledger), JSON.stringify(pids)));

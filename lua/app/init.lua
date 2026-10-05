@@ -285,6 +285,7 @@ function App:handle_keys()
   if self:key_pressed(hk.graveyard) then self.show.graveyard = not self.show.graveyard end
   if self:key_pressed(hk.areas) then self.show.areas = not self.show.areas end
   if self:key_pressed(hk.groups) then self.show.groups = not self.show.groups end
+  if self:key_pressed(hk.achievements) then self.show.achievements = not self.show.achievements end
   if self:key_pressed(hk.record) then self:toggle_recording() end
   if self:key_pressed(hk.confirm) and self.absence then
     self.absence = nil
@@ -561,6 +562,9 @@ function App:lines()
       lines[#lines + 1] = { text = "  " .. d.label .. (d.by ~= "" and (" – mitgerissen von " .. d.by) or ""), color = "rot" }
     end
     lines[#lines + 1] = { text = "Bestätigen mit Taste " .. tostring((self.cfg.hotkeys or {}).confirm), color = "gelb" }
+  end
+  if self.show.achievements then
+    for _, l in ipairs(Overlay.achievements(self.client.ledger, state)) do lines[#lines + 1] = l end
   end
   if self.show.groups and state then
     for _, l in ipairs(Overlay.groups(state, pid)) do lines[#lines + 1] = l end

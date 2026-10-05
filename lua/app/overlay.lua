@@ -7,6 +7,13 @@ local Export = require("core.export")
 
 local Overlay = {}
 
+local function U_sorted(map)
+  local keys = {}
+  for k in pairs(map or {}) do keys[#keys + 1] = k end
+  table.sort(keys)
+  return keys
+end
+
 Overlay.WIDTH = 42 -- Zeichen pro Zeile (DS-Bildschirm 256 px, Schrift ca. 6 px)
 
 local function num(n) return string.format("%.0f", n or 0) end
@@ -206,6 +213,26 @@ function Overlay.groups(state, pid)
     end
   end
   if #team.group_order == 0 then out[#out + 1] = { text = "  noch keine", color = "grau" } end
+  return out
+end
+
+--- Erfolge-Ansicht (aus der Bilanz).
+function Overlay.achievements(ledger, state)
+  local A = require("core.achievements")
+  local out = { { text = "Erfolge", color = "weiss" } }
+  if not ledger or not ledger.players then return out end
+  for _, pid in ipairs(state and state.order or U_sorted(ledger.players)) do
+    local p = ledger.players[pid]
+    if p then
+      local names = {}
+      for _, a in ipairs(A.LIST) do
+        if p.achievements and p.achievements[a.id] then names[#names + 1] = a.name end
+      end
+      for _, l in ipairs(Overlay.wrap(p.name .. " (" .. #names .. "/" .. #A.LIST .. "): " .. (#names > 0 and table.concat(names, ", ") or "–"))) do
+        out[#out + 1] = { text = l, color = "weiss" }
+      end
+    end
+  end
   return out
 end
 
