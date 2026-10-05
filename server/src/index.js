@@ -52,6 +52,17 @@ async function createServer({ config = loadConfig(), store, now, logger = consol
     }
     // Todesprotokoll als Text für Stream-Overlays: /api/<LOBBY>/todesprotokoll.txt (aktueller Versuch)
     // und /api/<LOBBY>/todesprotokoll_alle.txt (alle Versuche, dauerhaft)
+    const v = /^\/api\/([A-Za-z0-9]{3,16})\/verstoesse\.txt$/.exec(req.url.split('?')[0]);
+    if (v) {
+      const lobby = hub.lobbies.get(v[1].toUpperCase());
+      if (!lobby) {
+        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }).end('Lobby nicht gefunden\n');
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' });
+      res.end(core.violations(hub.lobbyLedger(lobby)));
+      return;
+    }
     const m = /^\/api\/([A-Za-z0-9]{3,16})\/todesprotokoll(_alle)?\.txt$/.exec(req.url.split('?')[0]);
     if (m) {
       const lobby = hub.lobbies.get(m[1].toUpperCase());

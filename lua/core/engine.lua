@@ -59,6 +59,23 @@ function Ctx:discord(kind, text)
   end
 end
 
+--- Regelverstoß protokollieren (Idee "Protokoll von Regelverstößen"): zählt beim Spieler, steht im Verlauf,
+-- wird gemeldet und dauerhaft in der Bilanz gespeichert. kind: orden_aufhol | items_im_kampf | savestate |
+-- level_cap | fang_gesperrt
+function Ctx:violation(pid, kind, text, level)
+  local state = self.state
+  local p = state.players[pid]
+  p.violations = (p.violations or 0) + 1
+  self:notify(text, level or "warn")
+  self:log("violation", text, { player = pid, violation = kind })
+  self:emit({ type = "stat", player = pid, key = "violations", delta = 1 })
+  self:emit({ type = "violation", entry = U.map({
+    t = self.t, player = pid, player_name = p.name, kind = kind, text = text,
+    attempt = state.attempt, lobby = state.code,
+  }) })
+  self:discord("violation", text)
+end
+
 function Ctx:fail(text)
   self.effects = { { type = "error", player = self.ev.player, text = text } }
   self.failed = true
@@ -458,8 +475,8 @@ function handlers.status(ctx, ev)
     local text = "Alter Spielstand bei " .. p.name .. " erkannt! Der Server-Zustand gilt weiter, "
       .. "alle Regeln greifen sofort wieder."
     ctx:emit({ type = "rollback", player = ev.player, text = text })
-    ctx:notify(text, "alarm")
     ctx:log("rollback", text, { player = ev.player })
+    ctx:violation(ev.player, "savestate", text, "alarm")
   end
 
   if type(ev.area) == "table" and ev.area.key ~= nil then
@@ -482,10 +499,8 @@ function handlers.status(ctx, ev)
       local before = p.badges
       p.badges = ev.badges
       if not allowed then
-        p.violations = p.violations + 1
-        local text = "Regelverstoß: " .. p.name .. " hat im Aufhol-Modus einen Orden geholt. " .. reason
-        ctx:notify(text, "alarm")
-        ctx:log("violation", text, { player = ev.player })
+        ctx:violation(ev.player, "orden_aufhol",
+          "Regelverstoß: " .. p.name .. " hat im Aufhol-Modus einen Orden geholt. " .. reason, "alarm")
       end
       local text = p.name .. team_tag(state, team) .. " hat Orden " .. U.num(ev.badges) .. " erhalten."
       if ev.badges - before > 1 then text = p.name .. " hat jetzt " .. U.num(ev.badges) .. " Orden." end
@@ -563,6 +578,10 @@ function handlers.catch(ctx, ev)
     local text = label .. " von " .. p.name .. " ist sofort tot: " .. reason .. "."
     ctx:notify(text, "warn", { ev.player })
     ctx:log("catch_dead", text, { player = ev.player })
+    if kind == "aufhol" then
+      ctx:violation(ev.player, "fang_gesperrt", "Regelverstoß: " .. p.name .. " hat im Aufhol-Modus in " .. ar.name
+        .. " gefangen, obwohl der Partner dort noch nicht gefangen hat.")
+    end
     return
   end
 
@@ -709,12 +728,22 @@ function handlers.item_used(ctx, ev)
     violation = "höchstens " .. U.num(rule.max) .. " Item(s) pro Kampf erlaubt"
   end
   if violation then
-    p.violations = p.violations + 1
-    local text = "Regelverstoß: " .. p.name .. team_tag(ctx.state, team) .. " hat im Kampf " .. U.num(count)
-      .. " Item(s) benutzt (" .. violation .. ")."
-    ctx:notify(text, "warn")
-    ctx:log("violation", text, { player = ev.player })
+    ctx:violation(ev.player, "items_im_kampf", "Regelverstoß: " .. p.name .. team_tag(ctx.state, team)
+      .. " hat im Kampf " .. U.num(count) .. " Item(s) benutzt (" .. violation .. ").")
   end
+end
+
+--- Ein Monster ist über dem Level-Cap (z. B. Aufstieg im Kampf oder Sonderbonbon). Einmal pro Monster und Cap.
+function handlers.over_cap(ctx, ev)
+  local p, team = require_running(ctx, ev)
+  if not p then return end
+  local mon = p.mons[U.key(ev.uid) or ""]
+  local key = U.key(ev.uid) .. "@" .. U.num(ev.cap or 0)
+  p.over_cap = p.over_cap or U.map()
+  if p.over_cap[key] then return end
+  p.over_cap[key] = true
+  ctx:violation(ev.player, "level_cap", "Regelverstoß: " .. (mon and M.mon_label(mon) or "Ein Monster") .. " von " .. p.name
+    .. team_tag(ctx.state, team) .. " ist über dem Level-Cap (Lv. " .. U.num(ev.level or 0) .. " > " .. U.num(ev.cap or 0) .. ").")
 end
 
 --- Aktuelles Team des Spielers (Kennungen, optional mit Level).

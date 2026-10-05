@@ -256,6 +256,18 @@ function renderDeathlogAll(state, ledger) {
     <th>Gebiet</th><th>Gegner / Auslöser</th><th>Art</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
+const VIOLATIONS = { orden_aufhol: 'Orden im Aufhol-Modus', items_im_kampf: 'Items im Kampf', savestate: 'alter Spielstand',
+  level_cap: 'über dem Level-Cap', fang_gesperrt: 'gesperrter Fang' };
+
+function renderViolations(state, ledger) {
+  const log = (ledger && ledger.violations) || [];
+  if (!log.length) return '<p class="muted">Keine Regelverstöße.</p>';
+  const rows = log.slice(0, 100).map((v) => `<tr><td>${time(v.t)}</td><td>${v.attempt ?? ''}</td>
+    <td>${esc(v.player_name || pname(state, v.player))}</td><td>${esc(VIOLATIONS[v.kind] || v.kind)}</td><td>${esc(v.text)}</td></tr>`).join('');
+  return `<div class="scroll"><table><thead><tr><th>Zeit</th><th>Versuch</th><th>Spieler</th><th>Art</th><th>Meldung</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
+}
+
 function render() {
   if (!last) return;
   const { state, derived, stats } = last;
@@ -278,5 +290,6 @@ function render() {
   html += card('Frühere Versuche', renderHistory(state), true);
   html += card('Bilanz (alle Runs)', renderLedger(state, last.ledger), true);
   html += card('Todesprotokoll (alle Versuche)', renderDeathlogAll(state, last.ledger), true);
+  html += card('Regelverstöße', renderViolations(state, last.ledger), true);
   app.innerHTML = html;
 }

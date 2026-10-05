@@ -61,3 +61,31 @@ T.test("Bilanz: Soul Link verloren zählt als Run ohne Sieg", function()
   T.eq(ledger.players.anna.wins, 0)
   T.eq(ledger.constellations["anna+ben"].runs, 1)
 end)
+
+T.test("Regelverstöße: alle Arten, dauerhaft im Protokoll, Zähler und Export", function()
+  local X = require("core.export")
+  local ledger = L.new()
+  local s = H.run(2, { settings = { battle_items = { mode = "verboten", max = 0 } } })
+  local function f(e) feed(ledger, s, e) end
+  f(s:ok("item_used", "anna", { count = 1 }))
+  s:ok("status", "ben", { badges = 1 })
+  s:ok("status", "anna", { badges = 1 })
+  s:ok("offline", "ben")
+  f(s:ok("status", "anna", { badges = 2 }))                       -- Orden im Aufhol-Modus (gleich weit)
+  f(s:ok("catch", "anna", { uid = "x", area = H.AREA3 }))         -- gesperrter Fang
+  s:ok("online", "ben")
+  f(s:ok("status", "anna", { play_time = 100 }))
+  f(s:ok("status", "anna", { play_time = 10 }))                   -- alter Spielstand
+  f(s:ok("over_cap", "anna", { uid = "x", level = 20, cap = 14 }))
+  local again = s:ok("over_cap", "anna", { uid = "x", level = 21, cap = 14 })
+  T.no(T.find(again, { type = "violation" }), "einmal pro Monster und Cap")
+  T.eq(#ledger.violations, 5)
+  T.eq(ledger.players.anna.violations, 5)
+  local kinds = {}
+  for _, v in ipairs(ledger.violations) do kinds[#kinds + 1] = v.kind end
+  T.eq(kinds, { "items_im_kampf", "orden_aufhol", "fang_gesperrt", "savestate", "level_cap" })
+  local text = X.violations(L.view(ledger, { "anna", "ben" }))
+  T.ok(text:find("Anna: Items im Kampf 1, über dem Level%-Cap 1, Orden im Aufhol%-Modus 1, alter Spielstand 1, gesperrter Fang 1")
+    or text:find("Anna: [^\n]*gesperrter Fang 1"), text)
+  T.ok(text:find("Versuch 1  Regelverstoß"), text)
+end)

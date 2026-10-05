@@ -199,9 +199,9 @@ function App:enforce_extras(state, snap)
           self.reader:cap_exp(m.uid, max_exp)
         end
       end
-      if m.level > cap and not self.over_cap[m.uid] then
-        self.over_cap[m.uid] = true
-        self:note((m.species_name or ("Art " .. m.species)) .. " ist über dem Level-Cap (" .. m.level .. " > " .. cap .. ").", "warn")
+      if m.level > cap and not self.over_cap[m.uid .. "@" .. cap] then
+        self.over_cap[m.uid .. "@" .. cap] = true
+        self.client:send_event({ type = "over_cap", uid = m.uid, level = m.level, cap = cap })
       end
     end
   end
@@ -383,6 +383,11 @@ function App:export_deathlog()
     self.fs.write_atomic(self.local_dir .. "/todesprotokoll.txt", text)
   end
   if self.client.ledger then
+    local ok3, vt = pcall(Export.violations, self.client.ledger)
+    if ok3 and vt ~= self.last_export_viol then
+      self.last_export_viol = vt
+      self.fs.write_atomic(self.local_dir .. "/verstoesse.txt", vt)
+    end
     local ok2, all = pcall(Export.deathlog_all, self.client.ledger)
     if ok2 and all ~= self.last_export_all then
       self.last_export_all = all

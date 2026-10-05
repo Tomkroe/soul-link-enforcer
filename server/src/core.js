@@ -27,6 +27,9 @@ function createCore() {
     deathlogAll(view) {
       return mod.call('deathlog_all', JSON.stringify(view));
     },
+    violations(view) {
+      return mod.call('violations', JSON.stringify(view));
+    },
     check(state) {
       return JSON.parse(mod.call('check', JSON.stringify(state)));
     },

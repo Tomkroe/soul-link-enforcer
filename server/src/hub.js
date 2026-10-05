@@ -5,6 +5,7 @@
 const CLIENT_EVENTS = new Set([
   'leave', 'set_settings', 'set_teams', 'start_run', 'new_attempt',
   'status', 'catch', 'encounter_failed', 'faint', 'party', 'ack_absence', 'propose', 'vote', 'item_used',
+  'over_cap',
 ]);
 
 const CODE_RE = /^[A-Z0-9]{3,16}$/;
@@ -198,7 +199,7 @@ class Hub {
     }
     lobby.state = state;
     lobby.dirty = true;
-    if (effects.some((e) => e.type === 'stat' || e.type === 'reset_stats' || e.type === 'result' || e.type === 'death')) {
+    if (effects.some((e) => e.type === 'stat' || e.type === 'reset_stats' || e.type === 'result' || e.type === 'death' || e.type === 'violation')) {
       const names = {};
       for (const pid of lobby.state.order) names[pid] = lobby.state.players[pid].name;
       this.ledger = this.core.ledgerApply(this.ledger, effects, names);

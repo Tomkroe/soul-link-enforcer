@@ -142,4 +142,37 @@ function X.deathlog_all(ledger_view, limit)
   return table.concat(lines, "\n") .. "\n"
 end
 
+local VIOLATION_KINDS = {
+  orden_aufhol = "Orden im Aufhol-Modus", items_im_kampf = "Items im Kampf", savestate = "alter Spielstand",
+  level_cap = "über dem Level-Cap", fang_gesperrt = "gesperrter Fang",
+}
+X.VIOLATION_KINDS = VIOLATION_KINDS
+
+--- Protokoll der Regelverstöße über alle Versuche (neueste zuerst), mit Summe pro Spieler und Art.
+function X.violations(ledger_view, limit)
+  limit = limit or 100
+  local log = (ledger_view and ledger_view.violations) or {}
+  local lines = { "Soul Link – Protokoll der Regelverstöße" }
+  local per = {}
+  local order = {}
+  for _, v in ipairs(log) do
+    local key = v.player_name or v.player
+    if not per[key] then per[key] = {} order[#order + 1] = key end
+    per[key][v.kind] = (per[key][v.kind] or 0) + 1
+  end
+  for _, name in ipairs(order) do
+    local parts = {}
+    for _, kind in ipairs(U.sorted_keys(per[name])) do
+      parts[#parts + 1] = (VIOLATION_KINDS[kind] or kind) .. " " .. U.num(per[name][kind])
+    end
+    lines[#lines + 1] = name .. ": " .. table.concat(parts, ", ")
+  end
+  for i = 1, math.min(limit, #log) do
+    local v = log[i]
+    lines[#lines + 1] = string.format("%s  Versuch %s  %s", clock(v.t), U.num(v.attempt or 0), v.text)
+  end
+  if #log == 0 then lines[#lines + 1] = "Keine Regelverstöße." end
+  return table.concat(lines, "\n") .. "\n"
+end
+
 return X

@@ -65,6 +65,11 @@ function api.deathlog_all(view_json)
   return X.deathlog_all(json.decode(view_json))
 end
 
+--- Protokoll der Regelverstöße (aus der Bilanz-Ansicht).
+function api.violations(view_json)
+  return X.violations(json.decode(view_json))
+end
+
 --- Prüft die Gültigkeit eines Zustands (z. B. nach dem Laden). Rückgabe: {"ok":true} oder Fehler.
 function api.check(state_json)
   local state = json.decode(state_json)

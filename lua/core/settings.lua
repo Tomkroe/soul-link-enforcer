@@ -22,7 +22,8 @@ function S.defaults()
     randomizer = U.map({ mode = "aus", seed = "" }),     -- aus | alle | edition (Phase 5)
     goal = U.map({ kind = "spielende", value = 0 }),    -- spielende | orden (Phase 8)
     scoring = "rennen",        -- rennen | ueberleben (Phase 8)
-    discord = U.map({ death = true, group = true, badge = true, run_start = true, run_end = true }),
+    discord = U.map({ death = true, group = true, badge = true, run_start = true, run_end = true,
+      violation = true, achievement = true, tip = true, handicap = true }),
   })
 end
 
