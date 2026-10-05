@@ -66,8 +66,10 @@ function X.deathlog(state, stats, limit)
     local who = M.player_name(state, d.player) .. (#state.team_order > 1 and (" [" .. team.name .. "]") or "")
     local where = d.area ~= "" and (" in " .. d.area) or ""
     local by = d.opponent ~= "" and (" gegen " .. d.opponent) or (d.by ~= "" and (" durch " .. d.by) or "")
-    lines[#lines + 1] = string.format("%s  %s (%s) Lv.%s%s%s – %s", clock(d.t), d.label, who, U.num(d.level),
-      where, by, CAUSES[d.cause] or d.cause)
+    local st = d.stats and (d.stats.battles or 0) > 0
+      and string.format(" [%s Kämpfe, %s K.O.]", U.num(d.stats.battles), U.num(d.stats.kos or 0)) or ""
+    lines[#lines + 1] = string.format("%s  %s (%s) Lv.%s%s%s – %s%s", clock(d.t), d.label, who, U.num(d.level),
+      where, by, CAUSES[d.cause] or d.cause, st)
   end
   if #all == 0 then lines[#lines + 1] = "Noch keine Tode." end
   return table.concat(lines, "\n") .. "\n"

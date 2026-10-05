@@ -105,7 +105,7 @@ function Ctx:kill_mon(pid, uid, cause, info)
     t = self.t, player = pid, uid = uid, label = M.mon_label(mon), species_name = mon.species_name,
     level = mon.level, group = mon.group, cause = cause,
     area = info and info.area_name or "", opponent = info and info.opponent or "",
-    by = info and info.by or "",
+    by = info and info.by or "", stats = U.copy(mon.stats or U.map()), caught_level = mon.caught_level or 0,
   })
   team.graveyard[#team.graveyard + 1] = entry
   -- Dauerhaftes Todesprotokoll über alle Versuche (core/ledger.lua), sofern eingeschaltet
@@ -756,6 +756,33 @@ function handlers.item_used(ctx, ev)
   if violation then
     ctx:violation(ev.player, "items_im_kampf", "Regelverstoß: " .. p.name .. team_tag(ctx.state, team)
       .. " hat im Kampf " .. U.num(count) .. " Item(s) benutzt (" .. violation .. ").")
+  end
+end
+
+--- Kampfstatistik pro Monster: nach jedem Kampf (Teilnehmer, Einsätze, besiegte Gegner).
+function handlers.battle_stats(ctx, ev)
+  local p = require_running(ctx, ev)
+  if not p then return end
+  local function stats(uid)
+    local mon = p.mons[U.key(uid) or ""]
+    if not mon then return nil end
+    mon.stats = mon.stats or U.map({ battles = 0, fought = 0, kos = 0 })
+    return mon.stats
+  end
+  for _, uid in ipairs(ev.party or {}) do
+    local st = stats(uid)
+    if st then st.battles = st.battles + 1 end
+  end
+  for _, uid in ipairs(ev.fought or {}) do
+    local st = stats(uid)
+    if st then st.fought = st.fought + 1 end
+  end
+  for uid, n in pairs(ev.kos or {}) do
+    local st = stats(uid)
+    if st and type(n) == "number" then
+      st.kos = st.kos + n
+      ctx:emit({ type = "stat", player = ev.player, key = "kos", delta = n })
+    end
   end
 end
 

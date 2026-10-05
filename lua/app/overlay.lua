@@ -209,7 +209,8 @@ function Overlay.groups(state, pid)
     for _, q in ipairs(team.members) do
       local uid = g.members[q]
       local mon = uid and state.players[q].mons[uid]
-      names[#names + 1] = mon and M.mon_label(mon) or "–"
+      local ko = mon and mon.stats and mon.stats.kos or 0
+      names[#names + 1] = mon and (M.mon_label(mon) .. (ko > 0 and (" " .. num(ko) .. "KO") or "")) or "–"
     end
     local mine = g.members[pid] and party[g.members[pid]] and "*" or " "
     local color = g.status == "tot" and "grau" or (g.status == "offen" and "gelb" or "weiss")

@@ -199,12 +199,27 @@ function Reader:read_battle()
   end
   local enemy = self:addr("battle_enemy")
   if enemy then
-    local plain = P.decrypt(self.emu.read_bytes(enemy, self.party_size))
-    local ok, m = Finder.plausible_mon(plain, self.gen)
-    if ok then
-      self:enrich(m)
-      battle.opponent = { species = m.species, level = m.level, shiny = m.shiny, species_name = m.species_name,
-        family = m.family, types = m.types }
+    battle.enemies = {}
+    for i = 0, 5 do
+      local plain = P.decrypt(self.emu.read_bytes(enemy + i * self.party_size, self.party_size))
+      local ok, m = Finder.plausible_mon(plain, self.gen)
+      if ok then
+        if i == 0 then
+          self:enrich(m)
+          battle.opponent = { species = m.species, level = m.level, shiny = m.shiny, species_name = m.species_name,
+            family = m.family, types = m.types }
+        end
+        battle.enemies[#battle.enemies + 1] = { pid = m.pid, hp = m.hp }
+      elseif i == 0 then
+        break
+      end
+    end
+  end
+  -- Aktives eigenes Monster (für die Kampfstatistik): PID -> Kennung über das Team
+  local apid = self:read("battle_active_pid", 32)
+  if apid and apid ~= 0 then
+    for uid, _ in pairs(self.party_slots) do
+      if uid:sub(1, 8) == P.hex(apid, 8) then battle.active_uid = uid end
     end
   end
   return battle

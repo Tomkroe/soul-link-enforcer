@@ -57,6 +57,9 @@ return {
     battle_flag = { addr = 0x0224A55A, width = 16, values = { [0x2100] = true, [0x2101] = true }, tested = false },
     battle_type = { chain = CHAIN, offset = 0x4189E, width = 16, wild_if_zero = true, tested = false },
     battle_enemy = { chain = CHAIN, offset = 0x4BE5C, tested = false },
+    -- Kampfstatistik: PID des aktiven eigenen Monsters ([IM] playerBattleMonPID, Basis +0x47620) und
+    -- Gegner-Team (6 Datensätze ab battle_enemy) für besiegte Gegner.
+    battle_active_pid = { chain = CHAIN, offset = 0x47620, width = 32, tested = false },
 
     -- Boxen: keine Quelle. check.lua findet den Anfang (Monster in Box 1, Platz 1 legen); dann hier eintragen:
     -- boxes = { rel = "party", offset = <aus dem Bericht>, count = 18, slots = 30, tested = false },

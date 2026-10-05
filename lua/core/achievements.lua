@@ -20,6 +20,7 @@ A.LIST = {
   { id = "friedhofsgaertner", name = "Friedhofsgärtner", text = "50 eigene Tode", key = "deaths", min = 50 },
   { id = "seelenverwandt", name = "Seelenverwandt", text = "10 Monster mitgerissen", key = "dragged", min = 10 },
   { id = "tippkoenig", name = "Tippkönig", text = "10 Punkte in Tipprunden", key = "tip_points", min = 10 },
+  { id = "kaempfer", name = "Kämpfer", text = "100 Gegner besiegt", key = "kos", min = 100 },
 }
 
 A.BY_ID = {}

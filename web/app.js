@@ -135,7 +135,10 @@ function renderParties(state) {
       if (!m) return '<li class="muted">unbekannt</li>';
       const g = m.group && team ? team.groups[m.group] : null;
       const tag = g ? ` <span class="muted">(Gr. ${esc(m.group.slice(1))})</span>` : (m.status === 'frei' ? ' <span class="muted">(frei)</span>' : '');
-      return `<li class="${m.status === 'tot' ? 'dead' : ''}">${esc(monLabel(m))}${tag}</li>`;
+      const st = m.stats || {};
+      const gained = m.caught_level && m.level > m.caught_level ? `, +${m.level - m.caught_level} Lv.` : '';
+      const fights = st.battles ? ` <span class="muted">· ${st.battles} Kämpfe, ${st.kos || 0} K.O.${gained}</span>` : '';
+      return `<li class="${m.status === 'tot' ? 'dead' : ''}">${esc(monLabel(m))}${tag}${fights}</li>`;
     }).join('');
     return `<div class="stat"><b>${esc(p.name)}</b>${badgeBar(p.badges)}<ul class="feed">${mons || '<li class="muted">noch kein Team gemeldet</li>'}</ul></div>`;
   }).join('');
@@ -267,10 +270,27 @@ const ACHIEVEMENTS = [
   ['ordensjaeger', 'Ordensjäger'], ['achtfach', 'Achtfach'], ['makellos', 'Makellos'], ['aufholjagd', 'Aufholjagd'],
   ['volles_haus', 'Volles Haus'], ['sieger', 'Sieger'], ['hattrick', 'Hattrick'], ['durchhalter', 'Durchhalter'],
   ['pechvogel', 'Pechvogel'], ['friedhofsgaertner', 'Friedhofsgärtner'], ['seelenverwandt', 'Seelenverwandt'],
-  ['tippkoenig', 'Tippkönig'],
+  ['tippkoenig', 'Tippkönig'], ['kaempfer', 'Kämpfer'],
 ];
 
 const TIP_LABELS = { ohne_tod: 'ohne Tod', ein_tod: '1 Tod', mehr: '2+ Tode oder ausgeschieden' };
+
+function renderBattleStats(state) {
+  const all = [];
+  for (const pid of state.order) {
+    const p = state.players[pid];
+    for (const m of Object.values(p.mons || {})) {
+      if (m.stats && (m.stats.battles || m.stats.kos)) all.push({ m, p });
+    }
+  }
+  if (!all.length) return '<p class="muted">Noch keine Kämpfe erfasst.</p>';
+  all.sort((a, b) => (b.m.stats.kos || 0) - (a.m.stats.kos || 0) || (b.m.stats.battles || 0) - (a.m.stats.battles || 0));
+  const rows = all.slice(0, 20).map(({ m, p }) => `<tr class="${m.status === 'tot' ? 'dead' : ''}"><td>${esc(monLabel(m))}</td>
+    <td>${esc(p.name)}</td><td>${m.stats.battles || 0}</td><td>${m.stats.fought || 0}</td><td>${m.stats.kos || 0}</td>
+    <td>${m.caught_level && m.level > m.caught_level ? `+${m.level - m.caught_level}` : '–'}</td></tr>`).join('');
+  return `<div class="scroll"><table><thead><tr><th>Monster</th><th>Spieler</th><th>Kämpfe</th><th>eingesetzt</th>
+    <th>K.O.</th><th>Level gewonnen</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
 
 function renderTips(state) {
   const rounds = Object.values(state.tips || {}).sort((a, b) => b.opened_at - a.opened_at);
@@ -327,5 +347,6 @@ function render() {
   html += card('Regelverstöße', renderViolations(state, last.ledger), true);
   html += card('Erfolge', renderAchievements(state, last.ledger), true);
   if (state.phase !== 'lobby') html += card('Tipprunden', renderTips(state));
+  if (state.phase !== 'lobby') html += card('Kampfstatistik', renderBattleStats(state));
   app.innerHTML = html;
 }

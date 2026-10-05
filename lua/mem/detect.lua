@@ -84,8 +84,21 @@ function Detect:update(snap, dead)
 
   -- Kampfbeginn (Item-Bestand merken: Items im Kampf, Phase 6.7)
   if snap.battle and not self.battle then
+    local party = {}
+    for _, m in ipairs(snap.party or {}) do if (m.hp or 1) > 0 then party[#party + 1] = m.uid end end
     self.battle = { wild = snap.battle.wild, opponent = snap.battle.opponent or {}, caught = false, area = area,
-      items_before = self.prev and self.prev.battle_items }
+      items_before = self.prev and self.prev.battle_items, party = party, fought = {}, kos = {}, enemy_hp = {} }
+  end
+  -- Kampfstatistik: wer kämpft, wer besiegt Gegner (KP eines Gegners fallen auf 0, während er aktiv ist)
+  if snap.battle and self.battle then
+    local b = self.battle
+    local active = snap.battle.active_uid
+    if active then b.fought[active] = true end
+    for _, e in ipairs(snap.battle.enemies or {}) do
+      local before = b.enemy_hp[e.pid]
+      if before and before > 0 and e.hp == 0 and active then b.kos[active] = (b.kos[active] or 0) + 1 end
+      b.enemy_hp[e.pid] = e.hp
+    end
   end
 
   -- Neue Monster: Fang oder Geschenk
@@ -129,6 +142,11 @@ function Detect:update(snap, dead)
     if b.items_before and snap.battle_items and snap.battle_items < b.items_before then
       emit({ type = "item_used", count = b.items_before - snap.battle_items })
     end
+    local fought = {}
+    for uid in pairs(b.fought) do fought[#fought + 1] = uid end
+    table.sort(fought)
+    emit({ type = "battle_stats", wild = b.wild, party = b.party, fought = fought, kos = b.kos,
+      opponent = b.opponent and b.opponent.species_name or "" })
     if b.wild and not b.caught then
       local result = self.prev and self.prev.battle and self.prev.battle.result
       if result == "caught" then

@@ -135,7 +135,9 @@ function M.new_mon(uid, ev, area_key, t)
     status = "lebt",            -- lebt | tot | frei | unbekannt
     cause = "",
     caught_at = t or 0,
+    caught_level = ev.level or 0,
     died_at = 0,
+    stats = U.map({ battles = 0, fought = 0, kos = 0 }), -- Kampfstatistik (Idee für später, umgesetzt)
   })
 end
 

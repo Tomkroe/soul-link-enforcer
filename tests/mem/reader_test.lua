@@ -211,3 +211,20 @@ T.test("Boxen: gefunden, mit Zwischenspeicher (nur Geändertes wird entschlüsse
   for i = 0, 135 do emu.write8(party + 0x2000 + i, 0) end
   T.eq(#r:snapshot(0, true).box, 2)
 end)
+
+T.test("Kampf: Gegner-Team und aktives Monster für die Kampfstatistik", function()
+  local emu = Emu.fake()
+  local vbase = us_layout(emu)
+  emu.write16(0x0224A55A, 0x2100)
+  local e1 = F.party_mon(5001, 396, 3, 0, 11)
+  local e2 = F.party_mon(5002, 399, 4, 12, 12)
+  for i, v in ipairs(e1) do emu.write8(vbase + 0x4BE5C + i - 1, v) end
+  for i, v in ipairs(e2) do emu.write8(vbase + 0x4BE5C + 236 + i - 1, v) end
+  emu.write32(vbase + 0x47620, 305419896)
+  local r = Reader.new({ profile = Profiles.load("CPUD"), emu = emu })
+  local b = r:snapshot(0).battle
+  T.eq(#b.enemies, 2)
+  T.eq(b.enemies[1].hp, 0)
+  T.eq(b.enemies[2].pid, 5002)
+  T.eq(b.active_uid, P.uid({ pid = 305419896, tid = 1, sid = 2 }))
+end)

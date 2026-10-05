@@ -141,3 +141,22 @@ T.test("Items im Kampf: Bestand vor und nach dem Kampf", function()
   ev = d:update(snap(4000, { party = { mon("a") }, battle_items = 5 }))
   T.no(T.find(ev, { type = "item_used" }))
 end)
+
+T.test("Kampfstatistik: Einsatz und besiegte Gegner je aktivem Monster", function()
+  local d = Detect.new()
+  d:update(snap(0, { party = { mon("a"), mon("b") } }))
+  local function battle(active, e1, e2)
+    return { wild = false, active_uid = active, opponent = { species_name = "Trainer" },
+      enemies = { { pid = 11, hp = e1 }, { pid = 12, hp = e2 } } }
+  end
+  d:update(snap(1000, { party = { mon("a"), mon("b") }, battle = battle("a", 20, 30) }))
+  d:update(snap(2000, { party = { mon("a"), mon("b") }, battle = battle("a", 0, 30) }))   -- a besiegt Gegner 1
+  d:update(snap(3000, { party = { mon("a"), mon("b") }, battle = battle("b", 0, 30) }))   -- Wechsel auf b
+  d:update(snap(4000, { party = { mon("a"), mon("b") }, battle = battle("b", 0, 0) }))    -- b besiegt Gegner 2
+  local ev = d:update(snap(5000, { party = { mon("a"), mon("b") } }))
+  local st = T.has(ev, { type = "battle_stats" })
+  T.eq(st.party, { "a", "b" })
+  T.eq(st.fought, { "a", "b" })
+  T.eq(st.kos, { a = 1, b = 1 })
+  T.eq(st.wild, false)
+end)
