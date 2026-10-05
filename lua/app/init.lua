@@ -528,12 +528,15 @@ end
 
 function App:frame()
   self:handle_keys()
-  if self.recorder and self.emu.get_joypad then self.recorder:frame(self.emu.get_joypad()) end
+  if self.recorder and self.emu.get_joypad then
+    self.recorder:frame(self.emu.get_joypad(), self.emu.touch_get and self.emu.touch_get())
+  end
   if self.emu.frame() % App.TICK_FRAMES == 0 then self:tick() end
   -- Automatik-Eingaben haben Vorrang vor der Sperre (sie sind Teil der Regeldurchsetzung bzw. des Komforts).
   local auto_keys = self.inputs:next_frame()
   if auto_keys then
     self.emu.set_joypad(auto_keys)
+    if self.emu.touch_set then self.emu.touch_set(auto_keys.touch) end
   elseif self.plan and self.plan.lock then
     self.emu.set_joypad(Enforce.joypad_mask(self.plan, self.snap and self.snap.in_menu) or {})
   end

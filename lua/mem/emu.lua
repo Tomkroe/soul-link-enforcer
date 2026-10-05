@@ -69,12 +69,31 @@ function Emu.desmume()
   a.keys = function() return input.get() end
   a.set_joypad = function(t) joypad.set(t) end -- getestet: nein (Tastennamen und false-Wirkung prüfen)
   a.get_joypad = function() return joypad.get() end
+  -- Touchscreen (unterer DS-Schirm). stylus.get/set – getestet: nein.
+  a.touch_get = function()
+    if stylus and stylus.get then
+      local ok, s = pcall(stylus.get)
+      if ok and s then return { x = s.x, y = s.y, touch = s.touch == true or s.touch == 1 } end
+    end
+    return nil
+  end
+  a.touch_set = function(t)
+    if not (stylus and stylus.set) then return end
+    if t then pcall(stylus.set, { x = t.x, y = t.y, touch = true })
+    else pcall(stylus.set, { touch = false }) end
+  end
   -- Schnellvorlauf: emu.speedmode gibt es nicht in jeder DeSmuME-Version (getestet: nein)
   a.set_speed = function(mode)
+    local want = mode == "turbo"
     if emu.speedmode then
-      pcall(emu.speedmode, mode == "turbo" and "turbo" or "normal")
+      -- "maximum" läuft ungebremst (schneller als "turbo"); Fallback auf "turbo", falls der Modus fehlt.
+      if not pcall(emu.speedmode, want and "maximum" or "normal") then
+        pcall(emu.speedmode, want and "turbo" or "normal")
+      end
       return true
     end
+    -- Manche DeSmuME-Builds haben stattdessen emu.setspeedmode / einen Framelimit-Schalter.
+    if emu.setspeedmode then pcall(emu.setspeedmode, want and "maximum" or "normal"); return true end
     return false
   end
   a.resolve = function(entry) return Emu.resolve_with(a.read32, entry) end
@@ -105,6 +124,10 @@ function Emu.fake(opts)
   a.set_joypad = function(t) a.joypad = t end
   a.pad = {}
   a.get_joypad = function() return a.pad end
+  a.touch = nil                       -- aktueller Touch { x, y, touch } oder nil (wird gelesen)
+  a.touch_log = {}                    -- gesetzte Touch-Werte (zum Prüfen)
+  a.touch_get = function() return a.touch end
+  a.touch_set = function(t) a.touch_log[#a.touch_log + 1] = t end
   a.speed = "normal"
   a.set_speed = function(mode) a.speed = mode return true end
   a.resolve = function(entry) return Emu.resolve_with(a.read32, entry) end

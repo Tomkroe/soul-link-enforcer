@@ -35,6 +35,26 @@ T.test("Aufnahme ergibt abspielbare Schritte (Rundreise)", function()
   T.eq(frames[6].up, true)
 end)
 
+T.test("Aufnahme + Wiedergabe mit Touch (Stylus)", function()
+  local r = Inputs.recorder()
+  r:frame({}, nil)
+  r:frame({ A = true }, { x = 50, y = 80, touch = true })
+  r:frame({ A = true }, { x = 50, y = 80, touch = true })
+  r:frame({}, nil)
+  local src = r:source()
+  T.ok(src:find("touch = { x = 50, y = 80 }"), "Touch steht im Quelltext")
+  local steps = (loadstring or load)("return " .. src)()
+  local i = Inputs.new()
+  i:play("t", steps)
+  local seq = {}
+  while true do
+    local f = i:next_frame()
+    if not f then break end
+    seq[#seq + 1] = f.touch and (f.touch.x .. "," .. f.touch.y) or "-"
+  end
+  T.eq(seq, { "-", "50,80", "50,80", "-" })
+end)
+
 -- Automatik mit simuliertem Spielzustand
 local function setup(profile)
   local vals = {}
