@@ -5,7 +5,7 @@
     "type": "file",
     "dir": "./server/data"
   },
-  "heartbeat_timeout_s": 20,
+  "heartbeat_timeout_s": 60,
   "save_delay_ms": 1000,
   "serve_web": true,
   "discord": {
