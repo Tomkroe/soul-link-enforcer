@@ -43,7 +43,7 @@ T.test("main.lua läuft mit DeSmuME-API (Lesemodus, keine Schreibzugriffe)", fun
       cb.gui[1]()
     end
     local all = table.concat(shown, "\n")
-    T.ok(all:find("Profil Platin: 0/"), all)
+    T.ok(all:find("Profil Platin: %d+/%d+ Adressen getestet"), all)
     T.ok(all:find("nur lesen"), all)
     T.ok(commands[1] and commands[1]:find("bridge.js"), "Brücke gestartet")
   end)
