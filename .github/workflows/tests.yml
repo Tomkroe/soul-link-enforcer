@@ -13,7 +13,9 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Lua 5.1 (wie DeSmuME) installieren
-        run: sudo apt-get update && sudo apt-get install -y lua5.1
+      - name: Lua 5.1 (wie DeSmuME) und luacheck installieren
+        run: sudo apt-get update && sudo apt-get install -y lua5.1 lua-check
       - run: npm ci
+      - name: Statische Prüfung (luacheck)
+        run: npm run lint
       - run: npm test

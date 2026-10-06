@@ -208,6 +208,9 @@ Vorbereitung: `backups.save_path` setzen, `write_enabled = true`, nur `party` au
 - [ ] Sicherung zurückspielen wie im README beschrieben – Spiel lädt den alten Stand.
 - [ ] Todeszähler im Overlay („Tode: …“) und in `local/todeszaehler.json`, auch nach Neustart.
 - [ ] Overlay mit Taste O aus/ein, Friedhof mit F, Gebiete mit G.
+- [ ] Tastennamen: Reagieren auch die Zifferntasten 7/8/9 (Tipprunde)? Falls nicht, in `config.lua` andere
+      Tasten eintragen (DeSmuME meldet Tasten über `input.get()`; Namen ggf. mit einem kurzen Test-Script ausgeben).
+      Keine Taste wählen, die DeSmuME selbst belegt (Spieltasten, Savestates).
 - [ ] Partner-Zeile im Overlay: Gebiet, Orden, „im Kampf“, OFFLINE.
 - [ ] Aufhol-Kasten (gelb hinterlegt) bei offline-Partner: „offline seit“, Orden-Grenze, Fang hier erlaubt/gesperrt,
       Liste freier Fanggebiete. Text passt in die Bildschirmbreite.

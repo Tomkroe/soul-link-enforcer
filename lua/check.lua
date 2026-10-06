@@ -54,6 +54,8 @@ local Finder = require("mem.finder")
 local P = require("mem.pkm")
 local reader = profile and Reader.new({ profile = profile, emu = adapter }) or nil
 local search = { done = false, pointers = nil, ptr_pos = nil, written = false }
+-- Vor write_report deklarieren, sonst wäre rando_info dort eine (leere) globale Variable
+local rando_scan, rando_info = nil, "Randomizer: rom_path in config.lua fehlt – Tabellensuche übersprungen"
 
 local function hex(n) return n and ("0x" .. P.hex(n, 8)) or "–" end
 
@@ -80,7 +82,6 @@ local function write_report(d)
 end
 
 -- Randomizer: geladene Begegnungstabelle über die ROM-Dateien suchen (braucht rom_path in config.lua)
-local rando_scan, rando_info = nil, "Randomizer: rom_path in config.lua fehlt – Tabellensuche übersprungen"
 do
   local ok_cfg, cfg = pcall(dofile, ROOT .. "/config.lua")
   if ok_cfg and type(cfg) == "table" and cfg.rom_path and cfg.rom_path ~= "" and profile and profile.randomizer then

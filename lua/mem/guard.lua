@@ -66,9 +66,17 @@ function Guard:write(name, offset, width, value, in_battle)
 end
 
 --- Schreibt eine Byte-Liste ab Profileintrag + offset.
+function Guard:refuse(name, reason)
+  if not self.refused[name .. reason] then
+    self.refused[name .. reason] = true
+    self.log("Schreiben abgelehnt (" .. name .. "): " .. reason)
+  end
+  return false, reason
+end
+
 function Guard:write_bytes(name, offset, bytes, in_battle)
   local ok, reason = self:can_write(name, in_battle)
-  if not ok then return self:write(name, offset, 8, 0, in_battle) end
+  if not ok then return self:refuse(name, reason) end
   local addr = self:address(name) + (offset or 0)
   for i, v in ipairs(bytes) do self.emu.write8(addr + i - 1, v) end
   self.writes = self.writes + 1

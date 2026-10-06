@@ -115,6 +115,8 @@ Test im Emulator: TESTEN.md Abschnitt „Extras“.
 
 ## Verlauf
 
+- 06.10.2026: Statische Prüfung mit luacheck (npm run lint, auch in CI). Gefunden und behoben: Die
+  Randomizer-Zeile fehlte im check.lua-Bericht (Variable vor der Deklaration genutzt); dazu kleine Aufräumarbeiten.
 - 05.10.2026 (11): Ideen für später gebaut: Regelverstöße-Protokoll, Erfolge, Tipprunden, Handicaps,
   Kampfstatistik, Zeitleiste (SVG). Fix im JSON-Modul (Schlüssel in aus [] gelesenen Tabellen gingen verloren).
 - 05.10.2026 (10): Boxen mit Zwischenspeicher (Leistung in DeSmuME), `npm run tunnel` (Server + Tunnel in einem

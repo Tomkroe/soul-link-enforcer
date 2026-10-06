@@ -511,6 +511,7 @@ zur Laufzeit aus dem geladenen Spiel und funktioniert deshalb auch mit vorab ran
 npm test             # alles
 npm run test:lua     # Lua-Tests unter fengari (Lua 5.3) und, falls installiert, Lua 5.1
 npm run test:server  # Server, Brücke, Ende-zu-Ende
+npm run lint         # statische Prüfung des Lua-Codes (braucht luacheck)
 ```
 
 Die Lua-Tests brauchen keine Installation (fengari kommt mit `npm install`). Ist zusätzlich ein Lua 5.1

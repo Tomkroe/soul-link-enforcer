@@ -15,7 +15,8 @@
     "test:lua": "node scripts/run-lua-tests.js",
     "test:server": "node --test server/test/*.test.js scripts/test/*.test.js",
     "tunnel": "node scripts/tunnel.js",
-    "restore": "node scripts/restore-backup.js"
+    "restore": "node scripts/restore-backup.js",
+    "lint": "luacheck lua/"
   },
   "dependencies": {
     "fengari": "^0.1.5",

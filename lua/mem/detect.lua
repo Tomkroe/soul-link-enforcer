@@ -116,9 +116,9 @@ function Detect:update(snap, dead)
         self.pending = nil
       end
       emit(ev)
-    elseif m.is_egg then
-      -- Eier zählen erst beim Schlüpfen (dann neue Kennung ohne is_egg ist dieselbe – bleibt unbekannt)
     end
+    -- Eier zählen erst beim Schlüpfen: Ein Ei wird nicht als bekannt vermerkt und erscheint nach dem
+    -- Schlüpfen (gleiche Kennung, is_egg = false) als neuer Fang im aktuellen Gebiet.
   end
 
   -- Tod: KP fallen auf 0
