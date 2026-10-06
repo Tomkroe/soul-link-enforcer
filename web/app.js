@@ -76,7 +76,18 @@ function setConn(text, cls) {
   el.className = `pill ${cls}`;
   const rb = $('#resetbtn');
   if (rb) rb.hidden = cls !== 'pill-on';
+  // "Neu verbinden" bei Fehlern und Verbindungsabbruch (nicht während des Verbindens oder wenn verbunden)
+  const nb = $('#reconnbtn');
+  if (nb) nb.hidden = cls !== 'pill-off';
 }
+
+// Manuell neu verbinden: mit den Werten aus den Eingabefeldern, laufende Auto-Wiederholung wird abgebrochen
+$('#reconnbtn').addEventListener('click', () => {
+  const server = $('#server').value.trim();
+  const lobby = $('#lobby').value.trim().toUpperCase();
+  if (!server || !lobby) return;
+  connect(server, lobby);
+});
 
 $('#resetbtn').addEventListener('click', () => {
   if (!ws || ws.readyState !== 1) return;
@@ -113,7 +124,10 @@ function connect(server, lobby) {
     setConn('verbunden', 'pill-on');
   };
   ws.onmessage = (ev) => {
-    const msg = JSON.parse(ev.data);
+    // Kaputte Nachricht verwerfen, statt die Anzeige zu blockieren
+    let msg;
+    try { msg = JSON.parse(ev.data); } catch { return; }
+    if (!msg || typeof msg !== 'object') return;
     if (msg.op === 'state') { last = msg; render(); }
     else if (msg.op === 'effects') {
       for (const e of msg.effects) {
