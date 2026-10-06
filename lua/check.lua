@@ -75,6 +75,7 @@ local function write_report(d)
   lines[#lines + 1] = rando_info
   lines[#lines + 1] = search.box_info or "Box: (kein Box-Datensatz gefunden – Monster in Box 1, Platz 1 legen)"
   lines[#lines + 1] = search.playtime or "Spielzeit: (noch kein Kandidat – check.lua einige Sekunden laufen lassen)"
+  if search.rtc then lines[#lines + 1] = search.rtc end
   for _, h in ipairs(search.pointers or {}) do
     lines[#lines + 1] = string.format("Zeiger auf Team-Basis: [%s] + 0x%s", hex(h.ptr), P.hex(h.offset))
   end
@@ -163,25 +164,36 @@ gui.register(function()
     search.written = true
     write_report(d)
   end
-  -- Spielzeit-Suche: Fenster um das Team alle 60 Frames (1 Spielsekunde) lesen
+  -- Spielzeit-Suche: Fenster um das Team alle 60 Frames (1 Spielsekunde) lesen.
+  -- Werte, die zur PC-Uhr passen, sind die Echtzeituhr (RTC) und keine Spielzeit.
   if frames % 60 == 0 then
     search.pt = search.pt or {}
-    local from = d.party_addr - 0x800
-    table.insert(search.pt, { bytes = adapter.read_bytes(from, 0x900), dt = 1 })
+    local before, size = 0x4000, 0x5000
+    table.insert(search.pt, { bytes = adapter.read_bytes(d.party_addr - before, size), dt = 1 })
     while #search.pt > 4 do table.remove(search.pt, 1) end
-    local cands = Finder.playtime_candidates(search.pt)
-    if #cands > 0 and #cands <= 4 then
-      local parts = {}
-      for _, c in ipairs(cands) do
-        local rel = c.offset - 0x800
-        parts[#parts + 1] = string.format("Team %s0x%s = %d:%02d:%02d", rel < 0 and "-" or "+", P.hex(math.abs(rel)),
-          math.floor(c.seconds / 3600), math.floor(c.seconds / 60) % 60, c.seconds % 60)
-      end
-      search.playtime = "Spielzeit-Kandidat: " .. table.concat(parts, ", ")
+    local now = os.date("*t")
+    local real, rtc = {}, {}
+    for _, c in ipairs(Finder.playtime_candidates(search.pt)) do
+      local rel = c.offset - before
+      local txt = string.format("Team %s0x%s = %d:%02d:%02d", rel < 0 and "-" or "+", P.hex(math.abs(rel)),
+        math.floor(c.seconds / 3600), math.floor(c.seconds / 60) % 60, c.seconds % 60)
+      local list = Finder.is_clock(c.seconds, now) and rtc or real
+      list[#list + 1] = txt
     end
+    local function join(list)
+      local shown = {}
+      for i = 1, math.min(#list, 4) do shown[i] = list[i] end
+      return table.concat(shown, ", ") .. (#list > 4 and string.format(" (+%d weitere)", #list - 4) or "")
+    end
+    if #real > 0 then search.playtime = "Spielzeit-Kandidat: " .. join(real) end
+    if #rtc > 0 then search.rtc = "Uhrzeit (RTC, keine Spielzeit): " .. join(rtc) end
   end
   if search.playtime then
     gui.text(2, y, search.playtime, "white")
+    y = y + 9
+  end
+  if search.rtc then
+    gui.text(2, y, search.rtc, "gray")
     y = y + 9
   end
   -- Box-Suche: Kennungen aller je im Team gesehenen Monster merken; liegt eines davon in einer Box,

@@ -1,7 +1,7 @@
 -- Pokémon Platin, deutsche Version (Game-Code CPUD).
 --
--- ALLE Adressen sind ungetestet (tested = false). Für die deutsche Version gibt es keine öffentliche
--- Quelle. Die Werte stammen aus Werkzeugen für die US- bzw. PAL-Version und sind deshalb nur Kandidaten:
+-- Ein Teil der Adressen ist im Emulator bestätigt (tested = true, mit Datum), der Rest ist ungetestet. Für die
+-- deutsche Version gibt es keine öffentliche Quelle. Die Werte stammen aus Werkzeugen für die US- bzw. PAL-Version und sind deshalb nur Kandidaten:
 --   [IM]  NDS-Ironmon-Tracker (Brian0255), constants/MemoryAddresses.lua, Platinum US:
 --         Basis = read32(read32(0x02000BA8) + 0x20); Team +0xB4, Orden +0x96, Medizin-Tasche +0xB60,
 --         Karte +0x239B0, Gegner-Trainer +0x4189E, Gegner-Team +0x4BE5C; Kampfstatus absolut 0x0224A55A
@@ -72,7 +72,7 @@ return {
 
     -- Spielzeit: NICHT gefunden. Der sekündlich steigende Wert nahe dem Team (Team -0x13/-0x12) ist die
     -- Echtzeituhr (Wanduhr-Minuten/-Sekunden), nicht die Spielzeit. Die echte Spielzeit liegt im Save-Block
-    -- (andere Stelle, TODO). Kein play_time-Eintrag -> Savestate-Erkennung läuft über Ordenstand.
+    -- (andere Stelle; check.lua sortiert RTC-Werte inzwischen aus). Kein play_time-Eintrag -> Savestate-Erkennung läuft über Ordenstand.
 
     -- Boxen: keine Quelle. check.lua findet den Anfang (Monster in Box 1, Platz 1 legen); dann hier eintragen:
     -- boxes = { rel = "party", offset = <aus dem Bericht>, count = 18, slots = 30, tested = false },

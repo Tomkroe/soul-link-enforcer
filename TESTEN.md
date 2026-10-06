@@ -21,12 +21,14 @@ Legende: [ ] offen · [x] bestanden · [!] Problem (Notiz dahinter)
 - [ ] `npm start`, dann `lua/main.lua` laden. Ein Fenster „Soul-Link-Brücke“ öffnet sich minimiert.
       Overlay: „Soul Link – Verbunden“, Zeile „LESEMODUS …“ mit Spielname.
 - [ ] Browser <http://localhost:8080/>, Server `ws://localhost:8080/ws`, Lobby `SOUL01`: Spieler erscheint online.
-- [ ] Script stoppen. Nach etwa 20 s steht der Spieler in der Übersicht auf „offline“.
+- [ ] Script stoppen. Nach etwa 60 s steht der Spieler in der Übersicht auf „offline“.
 - [ ] Emulator schließen. Die Brücke beendet sich nach etwa 90 s von selbst.
 
 ## 0b. Platin (CPUD): Adress-Suche mit `check.lua`
 
-Das Profil `lua/profiles/CPUD.lua` enthält Kandidaten aus Werkzeugen für die US-Version. Alles ist ungetestet.
+Das Profil `lua/profiles/CPUD.lua` enthält Kandidaten aus Werkzeugen für die US-Version. Bestätigt sind
+(06.10.2026): Game-Code, Team-Anzahl, Spielername, Ball- und Items-Tasche, Karte, Kampfstatus, Kampfart,
+Gegner. Offen: Orden, Medizin-/Kampf-Tasche, aktives Monster, Kampfkopie, Boxen, Spielzeit.
 
 - [ ] Spielstand laden, **mindestens ein Monster im Team**, `lua/check.lua` ausführen.
 - [ ] Zeile „Team: 0x…“ erscheint. Notieren, ob „Kandidat 1 (Ironmon US)“, „Kandidat 2 (yPokeStats …)“
@@ -39,7 +41,7 @@ Das Profil `lua/profiles/CPUD.lua` enthält Kandidaten aus Werkzeugen für die U
       Stimmt es nicht, ist der Abstand Team → Orden (−0x1E) in der deutschen Version anders.
 - [ ] „Karte“: ändert sich beim Wechsel von Route/Stadt/Gebäude (gleiche Zahl beim selben Ort).
 - [ ] „Bälle“: 0 ohne Bälle, ungleich 0, sobald ein Ball im Beutel ist.
-- [ ] „Kampf“: erster Wert 8448 (0x2100) oder 8449 im Kampf, sonst anders. Zweiter Wert 0 bei wildem Kampf,
+- [ ] „Kampf“: im Kampf High-Byte 0x21 (z. B. 8450 = 0x2102), sonst anders (deutsche Adresse 0x0224A560). Zweiter Wert 0 bei wildem Kampf,
       ungleich 0 bei Trainerkampf. Steht dort „nil“ oder ändert sich nichts → Adresse der deutschen Version fehlt.
 - [ ] Werte, die stimmen, in `CPUD.lua` auf `tested = true` setzen (nur Lese-Einträge; `party` erst nach Abschnitt 3).
 
@@ -135,6 +137,9 @@ Vorbereitung: `backups.save_path` setzen, `write_enabled = true`, nur `party` au
 
 - [ ] „Spielzeit-Kandidat: Team -0x… = h:mm:ss“ erscheint nach einigen Sekunden und stimmt mit der Spielzeit im
       Trainerpass überein → als `play_time = { rel = "party", offset = -0x…, tested = false }` ins Profil.
+      Werte unter „Uhrzeit (RTC, keine Spielzeit)“ passen zur Uhr des PCs und sind **nicht** die Spielzeit.
+      Kommt kein Kandidat: Spielzeit im Trainerpass notieren, ein paar Minuten spielen und `check.lua` erneut laufen
+      lassen (gesucht wird von Team −0x4000 bis +0x1000).
 - [ ] Spielername: Im Memory Viewer bei Team −0x38 steht der Name (Gen-4-Zeichen). Stimmt das, `trainer_name` testen.
 
 ## 3b. Level-Cap, Sonderbonbons, Folgemodus, Items im Kampf (nach Abschnitt 3)

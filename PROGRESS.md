@@ -1,21 +1,29 @@
 # Fortschritt
 
-Stand: 05.10.2026, Cloud-Sitzung ohne Emulator. Gebaut wurde alles, was sich ohne DeSmuME bauen und testen
-lässt. Phase 0 und alles mit Speicheradressen ist übersprungen, die Schnittstellen dafür stehen.
+Stand: 06.10.2026. Der Code ist für alle Phasen gebaut und automatisch getestet. Platin (CPUD) läuft im
+Emulator im Lesemodus; die ersten Adressen sind bestätigt (siehe unten).
 
-## Heute Abend am PC zuerst (Platin, CPUD) – in dieser Reihenfolge
+## Platin (CPUD): Stand im Emulator
 
-1. **Repo holen und testen:** `git pull`, `npm install`, `npm test`. Erwartet: alles grün.
-2. **Machbarkeit:** Platin in DeSmuME laden, `lua/check.lua` ausführen, TESTEN.md Abschnitt 0 ausfüllen.
-   Erwartet: Game-Code `CPUD`, „Profil geladen: Platin“, Datei-Test OK.
-3. **Adress-Suche:** Spielstand mit mindestens einem Monster laden. `check.lua` findet das Team über die
-   Kandidaten aus den US-Werkzeugen oder per Signatursuche und zeigt Orden, Karte, Bälle und Kampfstatus live
-   an. TESTEN.md Abschnitt 0b abarbeiten und **`local/adressen_CPUD.txt` an mich schicken**. Damit kann ich
-   abweichende deutsche Adressen eintragen.
-4. **Verbindung im Lesemodus:** `npm start`, dann `lua/main.lua`. Overlay: „Verbunden“ und
-   „Profil Platin: 0/… Adressen getestet – nur lesen“. Übersicht unter <http://localhost:8080/>.
-5. Stimmen die Werte, in `lua/profiles/CPUD.lua` die Lese-Einträge auf `tested = true` setzen und TESTEN.md
-   Abschnitt 1 und 2 durchgehen. Erst danach Abschnitt 3 mit `write_enabled = true`.
+**Bestätigt (`tested = true`):** Game-Code, Team-Anzahl, Spielername, Ball-Tasche, Items-Tasche (Sonderbonbons),
+Karte (`area_id`), Kampfstatus (`0x0224A560`, High-Byte `0x21`), Kampfart (wild/Trainer), Gegner im Kampf,
+Prolog-Aufnahme im Profil (`CPUD_prologue.lua`).
+
+**Noch offen, in dieser Reihenfolge:**
+1. **Orden** (`badges`, Team −0x1E): nach dem ersten Orden prüfen (Orden-Byte 0 → 1, danach 3).
+2. **Boxen:** ein Team-Monster in Box 1, Platz 1 legen, `check.lua` laufen lassen, den Abstand aus
+   „Box-Datensatz“ als `boxes` ins Profil eintragen. Bis dahin werden Fänge bei vollem Team nicht erkannt.
+3. **Spielzeit:** Der zuerst gefundene Wert war die Echtzeituhr. `check.lua` sortiert solche Werte jetzt als
+   „Uhrzeit (RTC, keine Spielzeit)“ aus und sucht in einem größeren Bereich (Team −0x4000 bis +0x1000). Ein
+   verbleibender „Spielzeit-Kandidat“, der mit dem Trainerpass übereinstimmt, kommt als `play_time` ins Profil.
+4. **Schreiben:** TESTEN.md Abschnitt 3 mit `write_enabled = true` (KP auf 0, Sperren). Erst danach `party` auf
+   `tested = true`.
+5. **Kampfstatistik:** `battle_active_pid` (aktives Monster) und `battle_party` (Kampfkopie) prüfen.
+6. **Medizin- und Kampf-Tasche** für „Items im Kampf“ prüfen.
+7. **Begegnungstabelle:** `rom_path` in `config.lua` setzen, dann `encounter_table` (Randomizer Stufe A) prüfen.
+
+Vom Nutzer geändert: Herzschlag-Zeitlimit 60 s statt 20 s, Reset-Knopf und „Verstöße löschen“ in der Übersicht,
+Übersicht mit Sprites und Typfarben, Tipprunden-Karte aus der Übersicht entfernt.
 
 ## Fertig (automatisch getestet)
 
@@ -24,7 +32,7 @@ lässt. Phase 0 und alles mit Speicheradressen ist übersprungen, die Schnittste
 | Projektgerüst | Ordnerstruktur, `package.json`, IntelliJ-Startkonfigurationen (`.run/`), CI (GitHub Actions, Lua 5.1 + fengari), Pages-Workflow, Render-Blueprint, `npm run tunnel` (Server + Tunnel in einem Befehl), `npm run restore`, Windows-Startdateien | `scripts/test` |
 | `lua/lib` | JSON (deterministisch), Bit-Operationen ohne native Operatoren | `tests/lib` |
 | `lua/core` | Zustandsmodell, Reducer, Abfragen: Lobby (1–4 Spieler, Einstellungen, Vorlagen, Teams), Link-Gruppen, Gebietsverbrauch, gekoppelter Tod, Team-Prüfung (Regeln 4/5), Level-Cap-Abfrage, Run verloren/gewonnen, **Aufhol-Modus** komplett (Orden-Sperre, Fang-Sperre, Abwesenheitsliste), Savestate-Erkennung, Abstimmungen (Einstellungen, Zähler zurücksetzen, aufgeben), Duplikat-/Schillernd-Klausel, Schonfrist, Wettkampf-Teams mit Rangliste | `tests/core`: jede Regel für 1, 2, 3 und 4 Spieler, Aufhol-Modus mit 2/3/4 Spielern, 2v2 und 1v1 |
-| `server/` | Lobby per Code, Lua-Engine über fengari, Herzschlag (offline nach 20 s), Wiedereinstieg mit Sequenznummern, Speicherung als JSON (Datei oder Upstash), Statistik dauerhaft und lobbyübergreifend, Discord-Webhook (je Art abschaltbar), Zuschauer schreibgeschützt, eigene Vorlagen speichern, liefert die Run-Übersicht aus | `server/test`: inkl. Neustart-Persistenz, Herzschlag, Abwesenheitsliste |
+| `server/` | Lobby per Code, Lua-Engine über fengari, Herzschlag (offline nach 60 s), Wiedereinstieg mit Sequenznummern, Speicherung als JSON (Datei oder Upstash), Statistik dauerhaft und lobbyübergreifend, Discord-Webhook (je Art abschaltbar), Zuschauer schreibgeschützt, eigene Vorlagen speichern, liefert die Run-Übersicht aus | `server/test`: inkl. Neustart-Persistenz, Herzschlag, Abwesenheitsliste |
 | `bridge/` + `lua/net` | Brücke Script ↔ Server (Dateiaustausch, startet automatisch, beendet sich ohne Lebenszeichen), Client mit Warteschlange, Bestätigungen, Ping, lokaler Kopie der Todeszähler | `tests/net`, `server/test/e2e.test.js` (**echtes Lua 5.1 → Brücke → Server**) |
 | `lua/mem` | PK4/PK5: Entschlüsselung, Blockreihenfolge, Prüfsumme, Felder, KP schreiben, Erfahrung deckeln; Schreibschutz (`guard`); Ereigniserkennung aus Schnappschüssen (Fang, Tod, verpasste Begegnung, Geschenk, Ei); Spiel-Leser aus Profil-Adressen; Emulator-Adapter | `tests/mem` (synthetische Datensätze, alle 24 Blockreihenfolgen) |
 | `lua/app` + `main.lua` | Ablauf im Script: Prüfzyklus, Ereignisse senden, tote Monster auf 0 KP (nur über Schreibschutz), Eingabesperre mit Begründung, Overlay (Status, Aufhol-Modus, Partner, Gruppen, Todeszähler, Friedhof, Gebiete), Tasten, Run-Start/Abstimmung per Taste, automatische Sicherungen (vor erstem Schreiben, Orden, 15 min, letzte 20) | `tests/app` inkl. `main.lua`/`check.lua` gegen nachgebaute DeSmuME-API |
@@ -45,9 +53,9 @@ Todeszähler und Protokoll überstehen einen Server-Neustart (`server/test`).
 Alles Folgende braucht den Emulator, also Adressen bestätigen und Verhalten prüfen. Im Code ist es gebaut, soweit
 unten nicht anders genannt.
 
-**Phase 0 – Machbarkeit** (heute Abend, siehe oben): `check.lua` ausführen, Entscheidung E3 bestätigen.
+**Phase 0 – Machbarkeit:** erledigt (Platin läuft, Datei-Austausch und Verbindung funktionieren).
 
-**Phase 1 – Lesen:** Platin-Profil bestätigen (Bericht `local/adressen_CPUD.txt`). Spieldaten aus der ROM sind
+**Phase 1 – Lesen:** Platin-Profil zum Teil bestätigt (siehe oben). Spieldaten aus der ROM sind
 gebaut (Namen, Typen, Wachstum, Entwicklungsreihen); Pfade, Textbank-Nummern und Zeichentabelle sind zu prüfen.
 Spielzeit-Kandidat liefert `check.lua`. **Noch nicht gebaut:** Gebietsnamen (Zuordnung Karte → Ortsname liegt
 nicht in einem einfachen Archiv), Boxen lesen (Box-Suche in `check.lua` ist gebaut; Adresse muss im Emulator ermittelt werden, bis dahin
@@ -115,6 +123,8 @@ Test im Emulator: TESTEN.md Abschnitt „Extras“.
 
 ## Verlauf
 
+- 06.10.2026 (2): Spielzeit-Suche in `check.lua`: Werte, die zur PC-Uhr passen, werden als Echtzeituhr
+  aussortiert; größerer Suchbereich. Doku auf den Stand der bestätigten Platin-Adressen gebracht.
 - 06.10.2026: Statische Prüfung mit luacheck (npm run lint, auch in CI). Gefunden und behoben: Die
   Randomizer-Zeile fehlte im check.lua-Bericht (Variable vor der Deklaration genutzt); dazu kleine Aufräumarbeiten.
 - 05.10.2026 (11): Ideen für später gebaut: Regelverstöße-Protokoll, Erfolge, Tipprunden, Handicaps,

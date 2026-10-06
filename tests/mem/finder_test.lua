@@ -122,6 +122,16 @@ T.test("Spielzeit-Suche: Wert, der jede Sekunde um 1 wächst", function()
   T.eq(#Finder.playtime_candidates({ samples[1], samples[2] }), 0, "zu wenige Proben")
 end)
 
+T.test("Spielzeit-Suche: Echtzeituhr (RTC) wird erkannt", function()
+  local now = { hour = 21, min = 14, sec = 30 }
+  T.eq(Finder.is_clock(21 * 3600 + 14 * 60 + 30, now), true, "gleiche Uhrzeit")
+  T.eq(Finder.is_clock(19 * 3600 + 14 * 60 + 32, now), true, "andere Zeitzone, ±2 s")
+  T.eq(Finder.is_clock(3 * 3600 + 59 * 60 + 59, { min = 0, sec = 1 }), true, "über den Stundenwechsel")
+  T.eq(Finder.is_clock(2 * 3600 + 5 * 60, now), false, "echte Spielzeit")
+  T.eq(Finder.is_clock(30 * 3600 + 14 * 60 + 30, now), false, "über 24 Stunden kann keine Uhrzeit sein")
+  T.eq(Finder.is_clock(100, nil), false, "ohne PC-Uhr")
+end)
+
 T.test("Box-Suche: bekanntes Monster als 136-Byte-Datensatz außerhalb des Teams finden", function()
   local emu = Emu.fake()
   local party = 0x02100100

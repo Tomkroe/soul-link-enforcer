@@ -182,6 +182,15 @@ function Finder.playtime_candidates(samples)
   return out
 end
 
+--- Prüft, ob ein Spielzeit-Kandidat in Wahrheit die Echtzeituhr (RTC) ist: Stunden < 24 und
+-- Minuten:Sekunden stimmen (±2 s) mit der PC-Uhr überein. now = { min = .., sec = .. } (os.date("*t")).
+-- Nur Minuten/Sekunden werden verglichen, damit eine andere Zeitzone im Emulator nicht stört.
+function Finder.is_clock(seconds, now)
+  if not now or seconds >= 24 * 3600 then return false end
+  local diff = math.abs(seconds % 3600 - (now.min * 60 + now.sec))
+  return math.min(diff, 3600 - diff) <= 2
+end
+
 --- Sucht Zeiger, die auf base - offset zeigen, für bekannte Offsets (um eine Zeigerkette zu bestätigen).
 -- Gibt eine Liste { {ptr_addr, offset}, ... } zurück. Durchsucht nur [from, to).
 function Finder.find_pointers(emu, target, offsets, from, to)
